@@ -160,14 +160,18 @@ export default function CounselingInputPage() {
             // 1. Get the most recent counseling session
             const { data: counselingSession, error: csError } = await supabase
                 .from('counseling_sessions')
-                .select('id, session_date, created_at, face_shape, personal_color_base, personal_color_season, concerns, request, selected_menus, ai_suggestion')
+                .select('*')
                 .eq('customer_id', customerId)
                 .order('created_at', { ascending: false })
                 .limit(1)
                 .maybeSingle();
 
             if (csError || !counselingSession) {
-                console.log("No previous counseling session found or error:", csError);
+                console.error('[PreviousRecord] counseling_sessions query failed or empty', {
+                    customerId,
+                    error: csError,
+                    hint: 'If error is permission denied, check RLS policy for counseling_sessions SELECT.',
+                });
                 setPrevRecord(null);
                 return;
             }
@@ -181,7 +185,13 @@ export default function CounselingInputPage() {
                 .limit(1)
                 .maybeSingle();
 
-            console.log("Treatment record by customer_id:", treatmentRecord, trError);
+            if (trError) {
+                console.error('[PreviousRecord] treatment_records query failed', {
+                    customerId,
+                    error: trError,
+                    hint: 'If error is permission denied, check RLS policy for treatment_records SELECT.',
+                });
+            }
 
             // Combine into the expected structure
             setPrevRecord({
@@ -247,7 +257,6 @@ export default function CounselingInputPage() {
     useEffect(() => {
         const fillFromLatestSession = async () => {
             if (!customerId || (ENABLE_LOCAL_FALLBACK && customerId.startsWith('local-'))) return;
-            if (storedDiagnosis.faceShape && storedDiagnosis.personalColor && storedDiagnosis.personalColorType) return;
 
             const { data: latestSession, error } = await supabase
                 .from('counseling_sessions')
@@ -257,15 +266,29 @@ export default function CounselingInputPage() {
                 .limit(1)
                 .maybeSingle();
 
-            if (error || !latestSession) return;
+            if (error) {
+                console.error('[DiagnosisPreset] counseling_sessions latest query failed', {
+                    customerId,
+                    error,
+                    hint: 'If error is permission denied, check RLS policy for counseling_sessions SELECT.',
+                });
+                return;
+            }
+
+            if (!latestSession) {
+                console.log('[DiagnosisPreset] No previous counseling_sessions row found', { customerId });
+                return;
+            }
 
             setStoredDiagnosis(prev => ({
-                faceShape: prev.faceShape || latestSession.face_shape || null,
-                personalColor: prev.personalColor || latestSession.personal_color_season || null,
-                personalColorType: prev.personalColorType ||
+                faceShape: latestSession.face_shape || prev.faceShape || null,
+                personalColor: latestSession.personal_color_season || prev.personalColor || null,
+                personalColorType:
                     (latestSession.personal_color_base === 'warm' ? 'yellowbase'
                         : latestSession.personal_color_base === 'cool' ? 'bluebase'
-                            : latestSession.personal_color_base) || null,
+                            : latestSession.personal_color_base) ||
+                    prev.personalColorType ||
+                    null,
             }));
         };
 
