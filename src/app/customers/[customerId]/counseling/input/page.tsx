@@ -110,9 +110,10 @@ export default function CounselingInputPage() {
     useEffect(() => {
         const fetchStylists = async () => {
             const { data } = await supabase
-                .from('staffs')
+                .from('stylists')
                 .select('id, name')
-                .order('name', { ascending: true });
+                .eq('is_active', true)
+                .order('created_at', { ascending: true });
             if (data && data.length > 0) {
                 setStylists(data);
             } else if (ENABLE_LOCAL_FALLBACK) {
@@ -135,17 +136,16 @@ export default function CounselingInputPage() {
                 return;
             }
 
-            const { data: customerRow, error } = await supabase
-                .from('customers')
-                .select('visit_count')
-                .eq('id', customerId)
-                .maybeSingle();
+            const { count, error } = await supabase
+                .from('visits')
+                .select('*', { count: 'exact', head: true })
+                .eq('customer_id', customerId);
 
-            if (!error && customerRow) {
-                setVisitCount(customerRow.visit_count || 0);
+            if (!error) {
+                setVisitCount(count || 0);
             } else {
                 console.error("Error fetching visit count:", error);
-                setVisitCount(((customer as any)?.visit_count as number) || 0);
+                setVisitCount(0);
             }
         };
 
@@ -160,7 +160,7 @@ export default function CounselingInputPage() {
             // 1. Get the most recent counseling session
             const { data: counselingSession, error: csError } = await supabase
                 .from('counseling_sessions')
-                .select('id, session_date, created_at, assessment, treatment_plan')
+                .select('id, session_date, created_at, face_shape, personal_color_base, personal_color_season, concerns, request, selected_menus, ai_suggestion')
                 .eq('customer_id', customerId)
                 .order('created_at', { ascending: false })
                 .limit(1)
@@ -243,17 +243,7 @@ export default function CounselingInputPage() {
         }));
     }, [customerId]);
 
-    // 1) customersテーブル値を優先取り込み
-    useEffect(() => {
-        if (!customer) return;
-        setStoredDiagnosis(prev => ({
-            faceShape: (customer as any)?.face_shape ?? prev.faceShape,
-            personalColor: (customer as any)?.personal_color ?? prev.personalColor,
-            personalColorType: (customer as any)?.personal_color_type ?? prev.personalColorType,
-        }));
-    }, [customer]);
-
-    // 2) customersに無い場合は直近counseling_sessionsから補完
+    // 1) 直近counseling_sessionsから補完（既存判定の基準）
     useEffect(() => {
         const fillFromLatestSession = async () => {
             if (!customerId || (ENABLE_LOCAL_FALLBACK && customerId.startsWith('local-'))) return;
@@ -261,7 +251,7 @@ export default function CounselingInputPage() {
 
             const { data: latestSession, error } = await supabase
                 .from('counseling_sessions')
-                .select('assessment')
+                .select('face_shape, personal_color_base, personal_color_season')
                 .eq('customer_id', customerId)
                 .order('created_at', { ascending: false })
                 .limit(1)
@@ -269,20 +259,13 @@ export default function CounselingInputPage() {
 
             if (error || !latestSession) return;
 
-            const assessment = latestSession.assessment || {};
-            const faceShape = assessment.faceShape || null;
-            const season = assessment.personalColor?.season || null;
-            const rawType = assessment.personalColor?.type || assessment.personalColor?.base || null;
-
-            const mappedType =
-                rawType === 'warm' ? 'yellowbase'
-                    : rawType === 'cool' ? 'bluebase'
-                        : rawType;
-
             setStoredDiagnosis(prev => ({
-                faceShape: prev.faceShape || faceShape,
-                personalColor: prev.personalColor || season,
-                personalColorType: prev.personalColorType || mappedType || null,
+                faceShape: prev.faceShape || latestSession.face_shape || null,
+                personalColor: prev.personalColor || latestSession.personal_color_season || null,
+                personalColorType: prev.personalColorType ||
+                    (latestSession.personal_color_base === 'warm' ? 'yellowbase'
+                        : latestSession.personal_color_base === 'cool' ? 'bluebase'
+                            : latestSession.personal_color_base) || null,
             }));
         };
 
@@ -417,7 +400,6 @@ export default function CounselingInputPage() {
                                         {(() => {
                                             const cs = prevRecord.counseling_sessions?.[0];
                                             const tr = prevRecord.treatment_records?.[0];
-                                            const assessment = cs?.assessment || {};
 
                                             // Helper to get menu name (Simplified mapping for display)
                                             const getMenuName = (id: string) => {
@@ -452,8 +434,8 @@ export default function CounselingInputPage() {
                                                         <div className="border-b pb-2">
                                                             <p className="font-bold mb-1 text-xs text-muted-foreground">メニュー</p>
                                                             <div className="flex flex-wrap gap-1">
-                                                                {assessment.selectedMenus?.length > 0 ? (
-                                                                    assessment.selectedMenus.map((m: string) => (
+                                                                {cs.selected_menus?.length > 0 ? (
+                                                                    cs.selected_menus.map((m: string) => (
                                                                         <Badge key={m} variant="secondary" className="text-xs">{getMenuName(m)}</Badge>
                                                                     ))
                                                                 ) : <span className="text-muted-foreground text-xs">なし</span>}
@@ -466,7 +448,7 @@ export default function CounselingInputPage() {
                                                         <div className="border-b pb-2">
                                                             <p className="font-bold mb-1 text-xs text-muted-foreground">お悩み</p>
                                                             <div className="flex flex-wrap gap-1">
-                                                                {(assessment.concerns || []).map((c: string) => (
+                                                                {(cs.concerns || []).map((c: string) => (
                                                                     <Badge key={c} variant="outline" className="text-xs">{c}</Badge>
                                                                 ))}
                                                             </div>
@@ -488,13 +470,13 @@ export default function CounselingInputPage() {
                                                         <div className="border-b pb-2 grid grid-cols-2 gap-2">
                                                             <div>
                                                                 <p className="font-bold mb-1 text-xs text-muted-foreground">顔型</p>
-                                                                <span className="text-sm">{FACE_SHAPES.find(f => f.id === assessment.faceShape)?.label || assessment.faceShape || "未設定"}</span>
+                                                                <span className="text-sm">{FACE_SHAPES.find(f => f.id === cs.face_shape)?.label || cs.face_shape || "未設定"}</span>
                                                             </div>
                                                             <div>
                                                                 <p className="font-bold mb-1 text-xs text-muted-foreground">パーソナルカラー</p>
                                                                 <span className="text-sm">
-                                                                    {assessment.personalColor?.base === 'warm' ? 'イエベ' : assessment.personalColor?.base === 'cool' ? 'ブルベ' : '未設定'}
-                                                                    {assessment.personalColor?.season && ` / ${assessment.personalColor.season}`}
+                                                                    {cs.personal_color_base === 'warm' ? 'イエベ' : cs.personal_color_base === 'cool' ? 'ブルベ' : '未設定'}
+                                                                    {cs.personal_color_season && ` / ${cs.personal_color_season}`}
                                                                 </span>
                                                             </div>
                                                         </div>
@@ -536,19 +518,19 @@ export default function CounselingInputPage() {
                                                     {cs && (
                                                         <div className="border-b pb-2 pt-2">
                                                             <p className="font-bold mb-1 text-xs text-muted-foreground">ご要望</p>
-                                                            <p className="text-sm">{assessment.request || "なし"}</p>
+                                                            <p className="text-sm">{cs.request || "なし"}</p>
                                                         </div>
                                                     )}
 
                                                     {/* 9. AI Suggestion */}
-                                                    {(cs?.treatment_plan?.aiSuggestion || assessment?.aiSuggestion) && (
+                                                    {cs?.ai_suggestion && (
                                                         <div className="pt-2">
                                                             <p className="font-bold mb-1 text-xs text-muted-foreground">AI提案（概要）</p>
                                                             {(() => {
                                                                 const aiSuggestionText =
-                                                                    typeof (cs.treatment_plan?.aiSuggestion || assessment.aiSuggestion) === 'string'
-                                                                        ? (cs.treatment_plan?.aiSuggestion || assessment.aiSuggestion)
-                                                                        : ((cs.treatment_plan?.aiSuggestion || assessment.aiSuggestion)?.aiAnalysis || "提案あり");
+                                                                    typeof cs.ai_suggestion === 'string'
+                                                                        ? cs.ai_suggestion
+                                                                        : (cs.ai_suggestion.aiAnalysis || "提案あり");
                                                                 const canExpand = aiSuggestionText.length > 100;
                                                                 const displayedText = showFullPrevAiSuggestion || !canExpand
                                                                     ? aiSuggestionText
@@ -607,11 +589,7 @@ export default function CounselingInputPage() {
                 {/* Previous diagnosis card for existing customer flow */}
                 {!isNewFlow && !isEditingDiagnosis && customer && (
                     <PreviousDiagnosisCard
-                        customer={{
-                            face_shape: customerFaceShape,
-                            personal_color: customerPersonalColor,
-                            personal_color_type: customerPersonalColorType,
-                        }}
+                        customer={{ face_shape: customerFaceShape, personal_color: customerPersonalColor, personal_color_type: customerPersonalColorType }}
                         onEdit={() => setIsEditingDiagnosis(true)}
                     />
                 )}

@@ -27,9 +27,9 @@ export default function StylistManagementPage() {
     const fetchStylists = async () => {
         setIsLoading(true);
         const { data, error } = await supabase
-            .from('staffs')
+            .from('stylists')
             .select('*')
-            .order('name', { ascending: true });
+            .order('created_at', { ascending: true });
 
         if (data) {
             setStylists(data.map((s: any) => ({ ...s, is_active: s.is_active ?? true })));
@@ -44,8 +44,8 @@ export default function StylistManagementPage() {
     const addStylist = async () => {
         if (!newName.trim()) return;
         const { error } = await supabase
-            .from('staffs')
-            .insert([{ name: newName }]);
+            .from('stylists')
+            .insert([{ name: newName, is_active: true }]);
 
         if (!error) {
             setNewName('');
@@ -56,7 +56,7 @@ export default function StylistManagementPage() {
     const toggleStatus = async (id: string, currentStatus: boolean) => {
         if (typeof currentStatus !== 'boolean') return;
         const { error } = await supabase
-            .from('staffs')
+            .from('stylists')
             .update({ is_active: !currentStatus })
             .eq('id', id);
 
@@ -71,7 +71,7 @@ export default function StylistManagementPage() {
     const saveEdit = async () => {
         if (!editingId || !editName.trim()) return;
         const { error } = await supabase
-            .from('staffs')
+            .from('stylists')
             .update({ name: editName })
             .eq('id', editingId);
 

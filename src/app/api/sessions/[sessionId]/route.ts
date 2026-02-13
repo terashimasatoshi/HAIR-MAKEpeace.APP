@@ -20,7 +20,7 @@ export async function GET(
         staff_assessment,
         staff_prescription,
         customer:customer_id (id, name),
-        staffs:staff_id (id, name)
+        stylist:stylist_id (id, name)
       `)
       .eq('id', sessionId)
       .single();
@@ -38,7 +38,7 @@ export async function GET(
       treatmentPlan: data.staff_prescription,
       assessment: data.staff_assessment,
       customer: data.customer,
-      staff: data.staffs,
+      staff: data.stylist,
     });
   } catch (err) {
     console.error('API error:', err);

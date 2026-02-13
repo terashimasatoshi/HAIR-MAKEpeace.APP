@@ -115,13 +115,6 @@ export default function Home() {
           </Link>
         </div>
 
-        {/* 4. Daily Stats (Optional) */}
-        <div className="text-center">
-          <span className="inline-flex items-center px-3 py-1 rounded-full bg-accent/10 text-accent-foreground text-sm font-medium">
-            本日の対応: 5件
-          </span>
-        </div>
-
       </main>
 
       {/* 5. Footer */}

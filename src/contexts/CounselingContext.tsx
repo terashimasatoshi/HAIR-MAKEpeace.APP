@@ -16,11 +16,6 @@ type Customer = {
     kana?: string;
     age?: number;
     phone?: string;
-    face_shape?: string | null;
-    personal_color?: string | null;
-    personal_color_type?: 'yellowbase' | 'bluebase' | 'warm' | 'cool' | null;
-    last_visit_date?: string | null;
-    visit_count?: number;
 };
 
 type CounselingData = {
@@ -119,7 +114,7 @@ export function CounselingProvider({ children, customerId }: { children: ReactNo
         }
         const fetchStylist = async () => {
             const { data: sData } = await supabase
-                .from('staffs')
+                .from('stylists')
                 .select('id, name')
                 .eq('id', data.stylistId)
                 .single();
@@ -167,14 +162,13 @@ export function CounselingProvider({ children, customerId }: { children: ReactNo
             personal_color: data.personalColor?.season || null,
             personal_color_type: data.personalColor?.base
                 ? (data.personalColor.base === 'warm' ? 'yellowbase' : 'bluebase')
-                : null as Customer['personal_color_type'],
+                : null,
             last_visit_date: new Date().toISOString().split('T')[0],
             visit_count: nextVisitCount,
         };
 
         locals[idx] = { ...locals[idx], ...updates };
         localStorage.setItem('peace_local_customers', JSON.stringify(locals));
-        setCustomer(prev => prev ? ({ ...prev, ...updates }) : prev);
     };
 
     // ... existing saveToSupabase ...
@@ -189,34 +183,37 @@ export function CounselingProvider({ children, customerId }: { children: ReactNo
                 return { visitId: null, sessionId: null };
             }
 
-            const defaultStoreId = 'd7f4bd2c-69a2-4caf-a717-4a70615b47e6';
-            const defaultStaffId = '3a71d761-c4da-4eef-b938-a383a576ec13';
-            const normalizedColorBase = data.personalColor?.base
-                ? (data.personalColor.base === 'warm' ? 'yellowbase' : 'bluebase')
-                : null;
+            const { data: visit, error: visitError } = await supabase
+                .from('visits')
+                .insert({
+                    customer_id: custId,
+                    visit_date: new Date().toISOString().split('T')[0],
+                    stylist_name: stylist?.name || null,
+                })
+                .select()
+                .single();
 
-            // 1. Create Counseling Session (actual schema)
+            if (visitError || !visit) {
+                console.error('Visit insert error:', visitError);
+                if (ENABLE_LOCAL_FALLBACK) updateLocalCustomerDiagnosis(custId);
+                return { visitId: null, sessionId: null };
+            }
+
+            // 1. Create Counseling Session
             const { data: session, error: sessionError } = await supabase
                 .from('counseling_sessions')
                 .insert({
+                    visit_id: visit.id,
                     customer_id: custId,
-                    staff_id: data.stylistId || defaultStaffId,
-                    store_id: defaultStoreId,
-                    session_date: new Date().toISOString().split('T')[0],
-                    status: 'draft',
-                    assessment: {
-                        concerns: data.concerns,
-                        damageLevel: data.damageLevel,
-                        faceShape: data.faceShape || null,
-                        personalColor: {
-                            base: data.personalColor?.base || null,
-                            season: data.personalColor?.season || null,
-                            type: normalizedColorBase,
-                        },
-                        request: data.request || '',
-                        selectedMenus: data.selectedMenus || [],
-                    },
-                    treatment_plan: aiSuggestion ? { aiSuggestion } : null,
+                    concerns: data.concerns,
+                    damage_level: data.damageLevel,
+                    face_shape: data.faceShape || null,
+                    personal_color_base: data.personalColor?.base || null,
+                    personal_color_season: data.personalColor?.season || null,
+                    request: data.request || '',
+                    selected_menus: data.selectedMenus || [],
+                    ai_suggestion: aiSuggestion || null,
+                    stylist_id: data.stylistId || null,
                 })
                 .select()
                 .single();
@@ -227,32 +224,10 @@ export function CounselingProvider({ children, customerId }: { children: ReactNo
                 return { visitId: null, sessionId: null };
             }
 
-            // 2. Keep latest diagnosis on customers table for next visits
-            const newVisitCount = ((customer?.visit_count as number) || 0) + 1;
-            const customerUpdatePayload = {
-                face_shape: data.faceShape || null,
-                personal_color: data.personalColor?.season || null,
-                personal_color_type: data.personalColor?.base
-                    ? (data.personalColor.base === 'warm' ? 'yellowbase' : 'bluebase')
-                    : null as Customer['personal_color_type'],
-                last_visit_date: new Date().toISOString().split('T')[0],
-                visit_count: newVisitCount,
-            };
-
-            const { error: customerUpdateError } = await supabase
-                .from('customers')
-                .update(customerUpdatePayload)
-                .eq('id', custId);
-
-            if (customerUpdateError) {
-                console.error('Customer update error:', customerUpdateError);
-                if (ENABLE_LOCAL_FALLBACK) updateLocalCustomerDiagnosis(custId);
-            }
-
+            setVisitId(visit.id);
             setCounselingSessionId(session.id);
-            setCustomer(prev => prev ? ({ ...prev, ...customerUpdatePayload }) : prev);
 
-            return { visitId: null, sessionId: session.id };
+            return { visitId: visit.id, sessionId: session.id };
         } catch (err) {
             console.error('Error saving to Supabase:', err);
             return { visitId: null, sessionId: null };

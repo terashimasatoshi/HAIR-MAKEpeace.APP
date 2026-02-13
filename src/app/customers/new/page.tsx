@@ -27,11 +27,6 @@ export default function NewCustomerPage() {
             age: age ? parseInt(age, 10) : null,
             phone: phone.trim() || null,
             created_at: new Date().toISOString(),
-            face_shape: null,
-            personal_color: null,
-            personal_color_type: null,
-            visit_count: 0,
-            last_visit_date: null,
         };
         const raw = localStorage.getItem('peace_local_customers');
         const existing = raw ? JSON.parse(raw) : [];

@@ -120,7 +120,7 @@ export default function MenuSelectionPage() {
         <div className="min-h-screen bg-background pb-32">
             {/* 1. Header */}
             <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-border px-4 py-3 flex items-center justify-between">
-                <Button variant="ghost" size="icon" onClick={() => router.push(`/customers/${customerId}/counseling/input`)}>
+                <Button variant="ghost" size="icon" onClick={() => router.back()}>
                     <ChevronLeft className="h-6 w-6" />
                 </Button>
                 <span className="font-bold">本日のメニュー</span>

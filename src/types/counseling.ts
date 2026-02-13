@@ -55,7 +55,7 @@ export interface AITreatmentPlan {
 export interface CounselingSession {
   id: string;
   customer_id: string;
-  staff_id: string;
+  stylist_id: string;
   store_id: string;
   session_date: string;
   status: SessionStatus;
@@ -76,8 +76,6 @@ export interface Customer {
   name: string;
   phone: string;
   line_user_id?: string;
-  last_visit_date?: string;
-  visit_count: number;
   created_at: string;
   updated_at: string;
 }

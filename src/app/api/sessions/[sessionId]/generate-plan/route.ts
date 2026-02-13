@@ -251,7 +251,7 @@ ${staffAssessmentText}
     const { error: updateError } = await supabase
       .from('counseling_sessions')
       .update({
-        treatment_plan: plan,
+        ai_suggestion: plan,
         status: 'plan_generated'
       })
       .eq('id', sessionId);

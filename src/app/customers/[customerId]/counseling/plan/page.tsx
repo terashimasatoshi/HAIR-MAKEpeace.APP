@@ -134,30 +134,9 @@ export default function AiProposalPage() {
         const fetchSuggestion = async () => {
             setIsLoading(true);
             try {
-                const mapCustomerFaceShapeToForm: Record<string, string> = {
-                    oval: "egg",
-                    round: "round",
-                    square: "base",
-                    heart: "triangle",
-                    oblong: "long",
-                    egg: "egg",
-                    base: "base",
-                    triangle: "triangle",
-                    long: "long",
-                };
-                const mapCustomerColorTypeToForm: Record<string, "warm" | "cool"> = {
-                    yellowbase: "warm",
-                    bluebase: "cool",
-                    warm: "warm",
-                    cool: "cool",
-                };
-
-                const fallbackFaceShape = mapCustomerFaceShapeToForm[(customer as any)?.face_shape] || "";
-                const fallbackColorBase = mapCustomerColorTypeToForm[(customer as any)?.personal_color_type] || "";
-                const fallbackColorSeason = (customer as any)?.personal_color || "";
-                const effectiveFaceShape = data.faceShape || fallbackFaceShape;
-                const effectivePersonalSeason = data.personalColor?.season || fallbackColorSeason;
-                const effectivePersonalBase = data.personalColor?.base || fallbackColorBase;
+                const effectiveFaceShape = data.faceShape || "";
+                const effectivePersonalSeason = data.personalColor?.season || "";
+                const effectivePersonalBase = data.personalColor?.base || "";
 
                 // Map Data ID to Label for better AI understanding
                 const FACE_SHAPE_MAP: Record<string, string> = {
@@ -229,7 +208,7 @@ export default function AiProposalPage() {
             {/* 1. Header */}
             <header className="bg-white/90 backdrop-blur-md sticky top-0 z-50 px-6 py-4 flex items-center justify-between border-b border-border/40 shadow-sm">
                 <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="icon" onClick={() => router.push(`/customers/${customerId}/counseling/menu`)} className="-ml-2">
+                    <Button variant="ghost" size="icon" onClick={() => router.back()} className="-ml-2">
                         <ChevronLeft className="h-6 w-6" />
                     </Button>
                     <h1 className="text-xl font-bold tracking-tight text-primary">HAIR&MAKE peace</h1>

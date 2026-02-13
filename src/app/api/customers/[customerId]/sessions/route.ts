@@ -20,7 +20,7 @@ export async function GET(
         created_at,
         staff_assessment,
         staff_prescription,
-        staffs:staff_id (
+        stylist:stylist_id (
           id,
           name
         )
@@ -48,7 +48,7 @@ export async function GET(
         date: row.session_date,
         status: row.status || 'completed',
         createdAt: row.created_at,
-        staffName: row.staffs?.name || '不明',
+        staffName: row.stylist?.name || '不明',
         hairConditionSummary: row.staff_assessment ? summary : null,
         treatmentSummary: row.staff_prescription?.selectedMenu?.name || null,
       };

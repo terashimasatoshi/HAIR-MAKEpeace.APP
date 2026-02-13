@@ -33,9 +33,10 @@ export function StylistProvider({ children }: { children: ReactNode }) {
     const fetchStylists = async () => {
         setIsLoading(true);
         const { data, error } = await supabase
-            .from('staffs')
+            .from('stylists')
             .select('id, name')
-            .order('name', { ascending: true });
+            .eq('is_active', true)
+            .order('created_at', { ascending: true });
 
         const normalizedStylists = (data || []).map((s: any) => ({ ...s, is_active: true }));
         const effectiveStylists = (!error && normalizedStylists.length > 0)

@@ -267,7 +267,7 @@ export default function TreatmentRecordPage() {
         <div className="min-h-screen bg-background pb-24">
             {/* Header */}
             <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-border px-4 py-3 flex items-center justify-between">
-                <Button variant="ghost" size="icon" onClick={() => router.push(`/customers/${customerId}/counseling/plan`)}>
+                <Button variant="ghost" size="icon" onClick={() => router.back()}>
                     <ChevronLeft className="h-6 w-6" />
                 </Button>
                 <span className="font-bold">施術記録</span>

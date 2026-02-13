@@ -124,7 +124,7 @@ export interface CustomerRow {
 export interface SessionRow {
   id: string;
   customer_id: string;
-  staff_id: string;
+  stylist_id: string;
   store_id: string;
   status: SessionStatus;
   created_at: string;

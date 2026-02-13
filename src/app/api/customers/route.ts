@@ -26,16 +26,13 @@ export async function GET(request: Request) {
 
     console.log('Fetched customers:', data);
 
-    // フロントエンド用に変換（実際のvisit_countを使用）
+    // フロントエンド用に変換
     const customers = (data || []).map((row: any) => ({
       id: row.id,
       name: row.name,
+      age: row.age,
       phone: row.phone,
       lineUserId: row.line_user_id,
-      visitCount: row.visit_count || 1,
-      lastVisitDate: row.last_visit_date 
-        ? new Date(row.last_visit_date).toLocaleDateString('ja-JP')
-        : null,
     }));
 
     return NextResponse.json(customers);
@@ -55,9 +52,10 @@ export async function POST(request: Request) {
       .from('customers')
       .insert({
         name: body.name,
+        kana: body.kana || null,
+        age: body.age || null,
         phone: body.phone || null,
-        line_user_id: body.lineUserId || null,
-        visit_count: 0,
+        email: body.email || null,
       })
       .select()
       .single();
@@ -70,8 +68,8 @@ export async function POST(request: Request) {
     return NextResponse.json({
       id: data.id,
       name: data.name,
+      age: data.age,
       phone: data.phone,
-      visitCount: 0,
     });
   } catch (err) {
     console.error('API POST error:', err);
