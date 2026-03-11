@@ -19,6 +19,8 @@ import { useCounseling } from "@/contexts/CounselingContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { PreviousDiagnosisCard } from "@/components/counseling/PreviousDiagnosisCard";
 import { ENABLE_LOCAL_FALLBACK } from "@/lib/runtime-flags";
+import { FaceDiagnosisModal } from "@/components/face-diagnosis/FaceDiagnosisModal";
+import { Camera } from "lucide-react";
 
 // Mock Data
 const CONCERN_CATEGORIES = {
@@ -222,6 +224,7 @@ export default function CounselingInputPage() {
 
     const setDamageLevel = (level: number) => updateData({ damageLevel: level });
     const setFaceShape = (shape: string) => updateData({ faceShape: shape });
+    const [showFaceDiagnosis, setShowFaceDiagnosis] = useState(false);
     const setPersonalColorBase = (base: "warm" | "cool") => {
         updateData({ personalColor: { base, season: "" } });
     };
@@ -731,7 +734,21 @@ export default function CounselingInputPage() {
                                         {faceShape && <span className="text-sm font-normal text-muted-foreground ml-2">({FACE_SHAPES.find(f => f.id === faceShape)?.label})</span>}
                                     </div>
                                 </AccordionTrigger>
-                                <AccordionContent className="p-4 pt-0">
+                                <AccordionContent className="p-4 pt-0 space-y-4">
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => setShowFaceDiagnosis(true)}
+                                        className="w-full border-primary text-primary hover:bg-primary/5"
+                                    >
+                                        <Camera className="w-4 h-4 mr-2" />
+                                        カメラで診断
+                                    </Button>
+                                    <div className="relative">
+                                        <div className="absolute inset-x-0 top-1/2 border-t border-muted" />
+                                        <p className="relative text-center text-xs text-muted-foreground bg-white px-2 w-fit mx-auto">
+                                            または手動で選択
+                                        </p>
+                                    </div>
                                     <RadioGroup value={faceShape} onValueChange={setFaceShape} className="grid grid-cols-3 gap-3">
                                         {FACE_SHAPES.map((shape) => (
                                             <div key={shape.id}>
@@ -871,6 +888,12 @@ export default function CounselingInputPage() {
                     次へ：メニュー選択
                 </Button>
             </div>
+
+            <FaceDiagnosisModal
+                open={showFaceDiagnosis}
+                onOpenChange={setShowFaceDiagnosis}
+                onResult={(faceShapeId) => setFaceShape(faceShapeId)}
+            />
         </div>
     );
 }
