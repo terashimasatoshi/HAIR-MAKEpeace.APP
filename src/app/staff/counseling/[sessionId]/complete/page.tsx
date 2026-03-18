@@ -21,8 +21,8 @@ export default function CompletePage() {
     router.push('/staff');
   };
 
-  // レポートURL（実際はSupabaseで生成したIDを使用）
-  const reportUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/report/${sessionId}`;
+  // レポートURL
+  const reportUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/share/counseling/${sessionId}`;
 
   return (
     <div className="min-h-screen bg-background">
