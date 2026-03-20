@@ -1,12 +1,61 @@
 'use client';
 
-import { Star } from 'lucide-react';
+import { useState } from 'react';
+import { Star, Sparkles, ClipboardCopy, Check, Loader2 } from 'lucide-react';
 
 interface GoogleReviewBannerProps {
   reviewUrl: string;
+  storeName: string;
+  menuNames: string[];
+  concerns: string[];
 }
 
-export function GoogleReviewBanner({ reviewUrl }: GoogleReviewBannerProps) {
+const MAX_GENERATE_COUNT = 3;
+
+export function GoogleReviewBanner({ reviewUrl, storeName, menuNames, concerns }: GoogleReviewBannerProps) {
+  const [hitokoto, setHitokoto] = useState('');
+  const [generatedReview, setGeneratedReview] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
+  const [generateCount, setGenerateCount] = useState(0);
+
+  const handleGenerate = async () => {
+    if (!hitokoto.trim() || isGenerating || generateCount >= MAX_GENERATE_COUNT) return;
+
+    setIsGenerating(true);
+    try {
+      const res = await fetch('/api/generate-review', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hitokoto, storeName, menuNames, concerns }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || '生成に失敗しました');
+      }
+
+      const data = await res.json();
+      setGeneratedReview(data.review);
+      setGenerateCount((c) => c + 1);
+    } catch (e: any) {
+      alert(e.message || '生成に失敗しました');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleCopy = async () => {
+    if (!generatedReview) return;
+    try {
+      await navigator.clipboard.writeText(generatedReview);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    } catch {
+      alert('コピーに失敗しました');
+    }
+  };
+
   return (
     <div className="bg-gradient-to-br from-[#f0ebe3] to-[#e8f0e8] rounded-2xl p-6 text-center">
       <p className="text-lg font-bold text-[#4A7C59] mb-3">
@@ -15,18 +64,87 @@ export function GoogleReviewBanner({ reviewUrl }: GoogleReviewBannerProps) {
       <p className="text-sm text-[#555] leading-relaxed mb-1">
         施術はいかがでしたか？
       </p>
-      <p className="text-sm text-[#555] leading-relaxed mb-1">
+      <p className="text-sm text-[#555] leading-relaxed mb-5">
         よろしければ、Googleでご感想をお聞かせください。
       </p>
-      <p className="text-sm text-[#555] leading-relaxed mb-5">
-        お客様の声が、私たちの励みになります。
-      </p>
+
+      {/* AI口コミ生成セクション */}
+      <div className="bg-white/70 rounded-xl p-4 mb-5 text-left">
+        <p className="text-sm font-bold text-[#333] mb-2">
+          一言で感想を教えてください
+        </p>
+        <input
+          type="text"
+          value={hitokoto}
+          onChange={(e) => setHitokoto(e.target.value.slice(0, 100))}
+          placeholder="例）ツヤツヤになった！"
+          className="w-full px-4 py-3 rounded-lg border border-[#ddd] bg-white text-sm text-[#333] placeholder-[#aaa] focus:outline-none focus:border-[#4A7C59] focus:ring-1 focus:ring-[#4A7C59]"
+        />
+        <div className="flex justify-between items-center mt-1 mb-3">
+          <span className="text-xs text-[#999]">{hitokoto.length}/100</span>
+          {generateCount > 0 && (
+            <span className="text-xs text-[#999]">
+              残り{MAX_GENERATE_COUNT - generateCount}回生成できます
+            </span>
+          )}
+        </div>
+        <button
+          onClick={handleGenerate}
+          disabled={!hitokoto.trim() || isGenerating || generateCount >= MAX_GENERATE_COUNT}
+          className="w-full inline-flex items-center justify-center gap-2 bg-[#4A7C59] hover:bg-[#3d6a4b] disabled:bg-[#aaa] disabled:cursor-not-allowed text-white font-bold py-3 px-6 rounded-full transition-colors text-sm"
+        >
+          {isGenerating ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              考え中...
+            </>
+          ) : (
+            <>
+              <Sparkles className="w-4 h-4" />
+              AIに口コミ文を考えてもらう
+            </>
+          )}
+        </button>
+      </div>
+
+      {/* AI生成結果 */}
+      {generatedReview && (
+        <div className="bg-white/80 rounded-xl p-4 mb-5 text-left">
+          <p className="text-sm font-bold text-[#333] mb-2 flex items-center gap-1.5">
+            <span>💬</span> AIが考えた口コミ文
+          </p>
+          <div className="bg-[#FDFBF7] rounded-lg p-4 text-sm text-[#333] leading-relaxed whitespace-pre-wrap border border-[#e4e4e7]">
+            {generatedReview}
+          </div>
+          <button
+            onClick={handleCopy}
+            className="mt-3 w-full inline-flex items-center justify-center gap-2 bg-white hover:bg-[#f5f5f5] text-[#333] font-bold py-2.5 px-6 rounded-full transition-colors text-sm border border-[#ddd]"
+          >
+            {isCopied ? (
+              <>
+                <Check className="w-4 h-4 text-[#4A7C59]" />
+                コピーしました！
+              </>
+            ) : (
+              <>
+                <ClipboardCopy className="w-4 h-4" />
+                この文章をコピー
+              </>
+            )}
+          </button>
+          <p className="text-xs text-[#999] mt-2">
+            ※ この文章はAIが作成した参考文です。自由に編集してご利用ください
+          </p>
+        </div>
+      )}
+
+      {/* Googleレビューボタン */}
       <button
         onClick={() => window.open(reviewUrl, '_blank', 'noopener,noreferrer')}
         className="inline-flex items-center gap-2 bg-[#C5A572] hover:bg-[#b8955f] text-white font-bold py-3 px-8 rounded-full transition-colors shadow-md"
       >
         <Star className="w-5 h-5 fill-current" />
-        Googleで口コミを書く
+        Googleで口コミを投稿する
       </button>
       <p className="text-xs text-[#999] mt-4">
         ※ Googleアカウントでログイン済みならすぐに投稿できます

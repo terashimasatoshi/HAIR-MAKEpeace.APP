@@ -1,23 +1,55 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useParams } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { useCounseling } from "@/contexts/CounselingContext"; // Import Context
+import { useCounseling } from "@/contexts/CounselingContext";
 
-import { CheckCircle2, Home, Share2, Calendar, ChevronLeft } from "lucide-react";
+import { CheckCircle2, Home, Calendar, ChevronLeft, ClipboardCopy, Check } from "lucide-react";
 import { motion } from "framer-motion";
 import { format, addWeeks } from 'date-fns';
 import { ja } from 'date-fns/locale';
+import { QRCodeSVG } from 'qrcode.react';
+import { supabase } from '@/lib/supabase';
 
 export default function CompletePage() {
     const router = useRouter();
-    const { customer, isLoadingCustomer } = useCounseling(); // Use Context
+    const params = useParams();
+    const customerId = params.customerId as string;
+    const { customer, isLoadingCustomer } = useCounseling();
+    const [sessionId, setSessionId] = useState<string | null>(null);
+    const [isCopied, setIsCopied] = useState(false);
 
     // Calculate next visit date (6 weeks later)
     const today = new Date();
     const nextVisitDate = addWeeks(today, 6);
     const formattedNextVisit = format(nextVisitDate, "M月d日（E）", { locale: ja });
+
+    // 最新のセッションIDを取得
+    useEffect(() => {
+        (async () => {
+            const { data } = await supabase
+                .from('counseling_sessions')
+                .select('id')
+                .eq('customer_id', customerId)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .single();
+            if (data) setSessionId(data.id);
+        })();
+    }, [customerId]);
+
+    const shareUrl = sessionId
+        ? `${typeof window !== 'undefined' ? window.location.origin : ''}/share/counseling/${sessionId}`
+        : '';
+
+    const handleCopyUrl = async () => {
+        if (!shareUrl) return;
+        await navigator.clipboard.writeText(shareUrl);
+        setIsCopied(true);
+        setTimeout(() => setIsCopied(false), 2000);
+    };
 
     return (
         <div className="min-h-screen bg-background flex flex-col">
@@ -69,19 +101,47 @@ export default function CompletePage() {
                     </CardContent>
                 </Card>
 
-
-
-                {/* 5. Next Appointment CTA */}
-                <div className="text-center space-y-2">
+                {/* Next Visit Message */}
+                <div className="text-center">
                     <h4 className="font-bold text-sm">次回のご来店をお待ちしております</h4>
-                    <Button variant="outline" className="w-full border-primary text-primary hover:bg-primary/5">
-                        次回予約を入れる (Web予約)
-                    </Button>
                 </div>
+
+                {/* QR Code Share Section */}
+                {sessionId && (
+                    <Card className="border-none shadow-sm">
+                        <CardContent className="p-5 flex flex-col items-center text-center space-y-4">
+                            <h4 className="font-bold text-sm">カウンセリングレポートを共有</h4>
+                            <div className="bg-white rounded-xl p-4">
+                                <QRCodeSVG
+                                    value={shareUrl}
+                                    size={180}
+                                    level="M"
+                                    marginSize={2}
+                                />
+                            </div>
+                            <p className="text-xs text-muted-foreground leading-relaxed">
+                                お客様のスマホでQRコードを読み取ると、<br />
+                                本日のカウンセリングレポートをご確認いただけます
+                            </p>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="w-full"
+                                onClick={handleCopyUrl}
+                            >
+                                {isCopied ? (
+                                    <><Check className="mr-2 h-4 w-4 text-green-600" />コピーしました！</>
+                                ) : (
+                                    <><ClipboardCopy className="mr-2 h-4 w-4" />URLをコピー</>
+                                )}
+                            </Button>
+                        </CardContent>
+                    </Card>
+                )}
 
             </main>
 
-            {/* 6. Footer Actions */}
+            {/* Footer Actions */}
             <footer className="p-6 pb-8 space-y-3 max-w-md mx-auto w-full">
                 <Button
                     className="w-full h-12 text-lg shadow-md"
@@ -90,10 +150,6 @@ export default function CompletePage() {
                 >
                     <Home className="mr-2 h-5 w-5" />
                     ホームに戻る
-                </Button>
-                <Button variant="ghost" className="w-full text-muted-foreground text-sm">
-                    <Share2 className="mr-2 h-4 w-4" />
-                    メール/SMSで送る
                 </Button>
             </footer>
         </div>

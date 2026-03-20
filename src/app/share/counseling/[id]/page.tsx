@@ -195,7 +195,14 @@ export default async function ShareCounselingPage({
           )}
 
         {/* Google口コミ誘導バナー */}
-        {reviewUrl && <GoogleReviewBanner reviewUrl={reviewUrl} />}
+        {reviewUrl && (
+          <GoogleReviewBanner
+            reviewUrl={reviewUrl}
+            storeName="HAIR&MAKE peace"
+            menuNames={prescription ? Object.values(prescription).filter((v): v is Record<string, any> => typeof v === 'object' && v !== null && 'product' in v).map((v) => v.product) : []}
+            concerns={assessment?.concerns ? (Array.isArray(assessment.concerns) ? assessment.concerns : [assessment.concerns]) : []}
+          />
+        )}
       </main>
 
       {/* フッター */}

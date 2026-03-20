@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter, useParams } from 'next/navigation';
-import { CheckCircle, MessageCircle, QrCode, Home } from 'lucide-react';
+import { CheckCircle, MessageCircle, Home } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import { useCounseling } from '@/context/CounselingContext';
 import { Button, Card } from '@/components/ui/common';
 
@@ -45,10 +46,15 @@ export default function CompletePage() {
           <Card className="text-center">
             <h3 className="font-bold text-text-primary mb-4">レポートを共有</h3>
             
-            {/* QR Code Placeholder */}
-            <div className="bg-white border-2 border-dashed border-border rounded-xl p-8 mb-4 flex flex-col items-center justify-center">
-              <QrCode className="w-32 h-32 text-text-secondary mb-2" />
-              <p className="text-sm text-text-secondary">
+            {/* QR Code */}
+            <div className="bg-white rounded-xl p-6 mb-4 flex flex-col items-center justify-center">
+              <QRCodeSVG
+                value={reportUrl}
+                size={180}
+                level="M"
+                marginSize={2}
+              />
+              <p className="text-sm text-text-secondary mt-3">
                 QRコードをお客様に見せてください
               </p>
             </div>
