@@ -145,7 +145,7 @@ export default function MenuSelectionPage() {
                 </div>
 
                 {/* 3. Menu Accordion */}
-                <Accordion type="multiple" defaultValue={["item-0"]} className="w-full space-y-2">
+                <Accordion type="multiple" className="w-full space-y-2">
                     {MENUS.map((group, idx) => (
                         <AccordionItem key={idx} value={`item-${idx}`} className="border rounded-lg bg-white px-3 shadow-sm data-[state=open]:border-primary/50">
                             <AccordionTrigger className="text-sm font-bold text-gray-800 hover:no-underline py-3">

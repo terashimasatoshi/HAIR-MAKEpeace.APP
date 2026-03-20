@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { Calendar, User, Sparkles } from 'lucide-react';
 import { getReviewUrl, getStoreKeyFromId } from '@/lib/google-review';
 import { GoogleReviewBanner } from '@/components/GoogleReviewBanner';
+import { SaveReportButton } from '@/components/SaveReportButton';
 import { createServiceSupabaseClient } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
@@ -18,11 +19,15 @@ export default async function ShareCounselingPage({
     .from('counseling_sessions')
     .select(`
       id,
-      session_date,
-      status,
-      store_id,
-      staff_assessment,
-      staff_prescription,
+      created_at,
+      concerns,
+      damage_level,
+      face_shape,
+      personal_color_base,
+      personal_color_season,
+      request,
+      selected_menus,
+      ai_suggestion,
       customer:customer_id (id, name),
       stylist:stylist_id (id, name)
     `)
@@ -38,34 +43,23 @@ export default async function ShareCounselingPage({
   const customer = Array.isArray(rawCustomer) ? rawCustomer[0] as { id: string; name: string } | undefined : rawCustomer as { id: string; name: string } | null;
   const rawStylist = session.stylist as unknown;
   const stylist = Array.isArray(rawStylist) ? rawStylist[0] as { id: string; name: string } | undefined : rawStylist as { id: string; name: string } | null;
-  const assessment = session.staff_assessment as Record<string, any> | null;
-  const prescription = session.staff_prescription as Record<string, any> | null;
-  const date = session.session_date
-    ? new Date(session.session_date).toLocaleDateString('ja-JP', {
+  const aiSuggestion = session.ai_suggestion as Record<string, any> | null;
+  const concerns = session.concerns as string[] | null;
+  const date = session.created_at
+    ? new Date(session.created_at).toLocaleDateString('ja-JP', {
         year: 'numeric',
         month: 'long',
         day: 'numeric',
       })
     : '';
 
-  // 店舗からレビューURLを取得
-  const storeKey = getStoreKeyFromId(session.store_id);
+  // 店舗からレビューURLを取得（store_idカラムがないのでデフォルト）
+  const storeKey = getStoreKeyFromId(undefined);
   const reviewUrl = getReviewUrl(storeKey);
-
-  // 薬剤名変換
-  const getProductName = (productId: string) => {
-    const products: Record<string, string> = {
-      'neo-meteo-10.5': 'ネオメテオ 10.5',
-      'neo-meteo-7.0': 'ネオメテオ 7.0',
-      'neo-meteo-4.5': 'ネオメテオ 4.5',
-      'meteo-gl': 'メテオGL',
-      incline: 'インクライン',
-    };
-    return products[productId] || productId;
-  };
 
   return (
     <div className="min-h-screen bg-[#FDFBF7]">
+      <div id="report-content">
       {/* ヘッダー */}
       <header className="bg-gradient-to-r from-[#4A7C59] to-[#5a9469] text-white px-4 py-6 text-center">
         <p className="text-xs tracking-widest opacity-80 mb-1">HAIR & MAKE</p>
@@ -95,8 +89,8 @@ export default async function ShareCounselingPage({
           )}
         </div>
 
-        {/* スタッフ所見 */}
-        {assessment && Object.keys(assessment).length > 0 && (
+        {/* カウンセリング診断 */}
+        {(concerns || session.damage_level || session.face_shape || session.personal_color_season) && (
           <div className="bg-white rounded-xl shadow-sm border border-[#e4e4e7]/50 p-4">
             <h3 className="font-bold text-[#333] mb-3 flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-[#4A7C59]" />
@@ -104,103 +98,148 @@ export default async function ShareCounselingPage({
             </h3>
 
             <div className="space-y-3">
-              {assessment.concerns && (
+              {concerns && concerns.length > 0 && (
                 <div>
                   <p className="text-xs text-[#6B7280] mb-1">お悩み</p>
                   <p className="text-[#333] bg-[#FDFBF7] rounded-lg p-3 text-sm">
-                    {assessment.concerns}
+                    {concerns.join('、')}
                   </p>
                 </div>
               )}
 
-              {assessment.assessment && (
+              {session.request && (
                 <div>
-                  <p className="text-xs text-[#6B7280] mb-1">スタイリスト所見</p>
-                  <p className="text-[#333] bg-[#FDFBF7] rounded-lg p-3 text-sm whitespace-pre-wrap">
-                    {assessment.assessment}
+                  <p className="text-xs text-[#6B7280] mb-1">ご要望</p>
+                  <p className="text-[#333] bg-[#FDFBF7] rounded-lg p-3 text-sm">
+                    {session.request}
                   </p>
                 </div>
               )}
 
-              {(assessment.damageLevel || assessment.curlLevel) && (
-                <div className="grid grid-cols-2 gap-3">
-                  {assessment.damageLevel && (
-                    <div className="bg-[#FDFBF7] rounded-lg p-3">
-                      <p className="text-xs text-[#6B7280] mb-1">ダメージレベル</p>
-                      <p className="font-bold text-[#333]">
-                        Lv.{assessment.damageLevel}
-                      </p>
-                    </div>
-                  )}
-                  {assessment.curlLevel && (
-                    <div className="bg-[#FDFBF7] rounded-lg p-3">
-                      <p className="text-xs text-[#6B7280] mb-1">クセレベル</p>
-                      <p className="font-bold text-[#333]">
-                        Lv.{assessment.curlLevel}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
+              <div className="grid grid-cols-2 gap-3">
+                {session.damage_level && (
+                  <div className="bg-[#FDFBF7] rounded-lg p-3">
+                    <p className="text-xs text-[#6B7280] mb-1">ダメージレベル</p>
+                    <p className="font-bold text-[#333]">
+                      Lv.{session.damage_level}
+                    </p>
+                  </div>
+                )}
+                {session.face_shape && (
+                  <div className="bg-[#FDFBF7] rounded-lg p-3">
+                    <p className="text-xs text-[#6B7280] mb-1">顔型</p>
+                    <p className="font-bold text-[#333]">
+                      {session.face_shape === 'oval' ? '卵型' : session.face_shape === 'round' ? '丸型' : session.face_shape === 'long' ? '面長' : session.face_shape === 'base' ? 'ベース型' : session.face_shape}
+                    </p>
+                  </div>
+                )}
+                {session.personal_color_season && (
+                  <div className="bg-[#FDFBF7] rounded-lg p-3">
+                    <p className="text-xs text-[#6B7280] mb-1">パーソナルカラー</p>
+                    <p className="font-bold text-[#333]">
+                      {session.personal_color_season === 'spring' ? 'スプリング' : session.personal_color_season === 'summer' ? 'サマー' : session.personal_color_season === 'autumn' ? 'オータム' : session.personal_color_season === 'winter' ? 'ウィンター' : session.personal_color_season}
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
 
-        {/* 使用薬剤 */}
-        {prescription && Object.keys(prescription).length > 0 && (
+        {/* AI提案 */}
+        {aiSuggestion && (
           <div className="bg-white rounded-xl shadow-sm border border-[#e4e4e7]/50 p-4">
-            <h3 className="font-bold text-[#333] mb-3">施術内容</h3>
+            <h3 className="font-bold text-[#333] mb-3 flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-[#D4A574]" />
+              AIおすすめ提案
+            </h3>
 
             <div className="space-y-3">
-              {['roots', 'middle', 'ends'].map((section) => {
-                const data = prescription[section];
-                if (!data) return null;
-                const label =
-                  section === 'roots'
-                    ? '根元'
-                    : section === 'middle'
-                      ? '中間'
-                      : '毛先';
-                return (
-                  <div key={section} className="bg-[#FDFBF7] rounded-lg p-3">
-                    <h4 className="font-bold text-sm text-[#6B7280] mb-1">
-                      {label}
-                    </h4>
-                    <p className="font-bold text-[#333]">
-                      {getProductName(data.product)}
-                    </p>
+              {aiSuggestion.colors && aiSuggestion.colors.length > 0 && (
+                <div>
+                  <p className="text-xs text-[#6B7280] mb-2">おすすめカラー</p>
+                  <div className="space-y-2">
+                    {(aiSuggestion.colors as Array<{ name: string; code: string; desc: string }>).map((color, i) => (
+                      <div key={i} className="bg-[#FDFBF7] rounded-lg p-3 flex items-start gap-3">
+                        <div
+                          className="w-8 h-8 rounded-full border border-[#e4e4e7] flex-shrink-0 mt-0.5"
+                          style={{ backgroundColor: color.code }}
+                        />
+                        <div>
+                          <p className="font-bold text-sm text-[#333]">{color.name}</p>
+                          <p className="text-xs text-[#6B7280] mt-0.5">{color.desc}</p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                );
-              })}
+                </div>
+              )}
+
+              {aiSuggestion.styles && aiSuggestion.styles.length > 0 && (
+                <div>
+                  <p className="text-xs text-[#6B7280] mb-2">おすすめスタイル</p>
+                  <div className="space-y-2">
+                    {(aiSuggestion.styles as Array<{ title: string; desc: string }>).map((style, i) => (
+                      <div key={i} className="bg-[#FDFBF7] rounded-lg p-3">
+                        <p className="font-bold text-sm text-[#333]">{style.title}</p>
+                        <p className="text-xs text-[#6B7280] mt-0.5">{style.desc}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {aiSuggestion.advice && (aiSuggestion.advice as string[]).length > 0 && (
+                <div>
+                  <p className="text-xs text-[#6B7280] mb-2">ホームケアアドバイス</p>
+                  <ul className="space-y-1">
+                    {(aiSuggestion.advice as string[]).map((tip, i) => (
+                      <li key={i} className="text-sm text-[#333] bg-[#FDFBF7] rounded-lg p-3">
+                        {tip}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           </div>
         )}
 
         {/* データがない場合 */}
-        {(!assessment || Object.keys(assessment).length === 0) &&
-          (!prescription || Object.keys(prescription).length === 0) && (
-            <div className="bg-white rounded-xl shadow-sm border border-[#e4e4e7]/50 p-4">
-              <div className="text-center py-8 text-[#6B7280]">
-                <p>カウンセリングデータを準備中です</p>
-              </div>
+        {!concerns && !session.damage_level && !aiSuggestion && (
+          <div className="bg-white rounded-xl shadow-sm border border-[#e4e4e7]/50 p-4">
+            <div className="text-center py-8 text-[#6B7280]">
+              <p>カウンセリングデータを準備中です</p>
             </div>
-          )}
-
-        {/* Google口コミ誘導バナー */}
-        {reviewUrl && (
-          <GoogleReviewBanner
-            reviewUrl={reviewUrl}
-            storeName="HAIR&MAKE peace"
-            menuNames={prescription ? Object.values(prescription).filter((v): v is Record<string, any> => typeof v === 'object' && v !== null && 'product' in v).map((v) => v.product) : []}
-            concerns={assessment?.concerns ? (Array.isArray(assessment.concerns) ? assessment.concerns : [assessment.concerns]) : []}
-          />
+          </div>
         )}
       </main>
 
-      {/* フッター */}
+      {/* フッター（レポート画像に含める） */}
       <footer className="text-center py-6 text-xs text-[#999]">
         <p>HAIR & MAKE peace</p>
       </footer>
+      </div>{/* /report-content */}
+
+      {/* レポート保存ボタン（画像には含めない） */}
+      <div className="p-4 max-w-lg mx-auto">
+        <SaveReportButton
+          targetId="report-content"
+          fileName={`peace-report-${date.replace(/\s/g, '')}.png`}
+        />
+      </div>
+
+        {/* Google口コミ誘導バナー */}
+        {reviewUrl && (
+          <div className="p-4 max-w-lg mx-auto pb-8">
+            <GoogleReviewBanner
+              reviewUrl={reviewUrl}
+              storeName="HAIR&MAKE peace"
+              menuNames={session.selected_menus as string[] || []}
+              concerns={concerns || []}
+            />
+          </div>
+        )}
     </div>
   );
 }

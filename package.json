@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.2",
+    "@google/generative-ai": "^0.24.1",
     "@hookform/resolvers": "^5.2.2",
     "@mediapipe/tasks-vision": "^0.10.32",
     "@radix-ui/react-accordion": "^1.2.12",
@@ -36,6 +37,7 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "framer-motion": "^12.34.0",
+    "html2canvas-pro": "^2.0.2",
     "lucide-react": "^0.562.0",
     "next": "16.1.1",
     "next-themes": "^0.4.6",
