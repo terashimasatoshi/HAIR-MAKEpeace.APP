@@ -1,18 +1,10 @@
 import { notFound } from 'next/navigation';
-import { createClient } from '@supabase/supabase-js';
 import { Calendar, User, Sparkles } from 'lucide-react';
 import { getReviewUrl, getStoreKeyFromId } from '@/lib/google-review';
 import { GoogleReviewBanner } from '@/components/GoogleReviewBanner';
+import { createServiceSupabaseClient } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
-
-// 共有ページ用に直接Supabaseクライアントを作成（cookieなし）
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://qzwbyphqaspxrcgajkts.supabase.co',
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-  );
-}
 
 export default async function ShareCounselingPage({
   params,
@@ -20,7 +12,7 @@ export default async function ShareCounselingPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const supabase = getSupabase();
+  const supabase = createServiceSupabaseClient();
 
   const { data: session, error } = await supabase
     .from('counseling_sessions')
