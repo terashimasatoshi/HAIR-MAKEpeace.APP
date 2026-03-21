@@ -1,10 +1,10 @@
 import { FaceMeasurements, FaceScores, FaceType } from "@/types/face";
 
 const FACE_TEMPLATES = {
-  oval:  { widthRatio: 1.00, jawRatio: 0.62, chinAngle: 110 },
-  round: { widthRatio: 1.30, jawRatio: 0.78, chinAngle: 135 },
-  long:  { widthRatio: 0.75, jawRatio: 0.62, chinAngle: 110 },
-  base:  { widthRatio: 1.50, jawRatio: 0.90, chinAngle: 125 },
+  oval:  { widthRatio: 1.00, jawRatio: 0.65, chinAngle: 110 },
+  round: { widthRatio: 1.25, jawRatio: 0.78, chinAngle: 130 },
+  long:  { widthRatio: 0.80, jawRatio: 0.62, chinAngle: 110 },
+  base:  { widthRatio: 1.40, jawRatio: 0.88, chinAngle: 125 },
 } as const;
 
 const SCALES = {
@@ -12,6 +12,9 @@ const SCALES = {
   jawRatio: 8,
   chinAngle: 0.08,
 };
+
+// softmax温度（低いほどスコア差がマイルドになる）
+const SOFTMAX_TEMPERATURE = 0.8;
 
 function calculateDistance(
   measurements: FaceMeasurements,
@@ -36,10 +39,15 @@ export function calculateScores(measurements: FaceMeasurements): {
     distances[type] = calculateDistance(measurements, FACE_TEMPLATES[type]);
   }
 
+  // longの判定を厳しくする: widthRatioが0.80未満でないとlongにペナルティ
+  if (measurements.widthRatio >= 0.80) {
+    distances.long += 1.5;
+  }
+
   const expScores: Record<FaceType, number> = {} as Record<FaceType, number>;
   let sumExp = 0;
   for (const type of faceTypes) {
-    const exp = Math.exp(-distances[type] * 1.5);
+    const exp = Math.exp(-distances[type] * SOFTMAX_TEMPERATURE);
     expScores[type] = exp;
     sumExp += exp;
   }

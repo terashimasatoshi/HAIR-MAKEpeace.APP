@@ -2,27 +2,51 @@ import { FaceLandmarker, FilesetResolver } from "@mediapipe/tasks-vision";
 import { FaceMeasurements } from "@/types/face";
 
 let faceLandmarker: FaceLandmarker | null = null;
+let currentMode: "IMAGE" | "VIDEO" | null = null;
+
+const WASM_URL =
+  "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.32/wasm";
+const MODEL_URL =
+  "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task";
+
+async function getFaceLandmarker(mode: "IMAGE" | "VIDEO"): Promise<FaceLandmarker> {
+  if (faceLandmarker && currentMode === mode) return faceLandmarker;
+
+  if (faceLandmarker) {
+    await faceLandmarker.setOptions({ runningMode: mode });
+    currentMode = mode;
+    return faceLandmarker;
+  }
+
+  const vision = await FilesetResolver.forVisionTasks(WASM_URL);
+
+  // GPU を試し、失敗したら CPU にフォールバック
+  for (const delegate of ["GPU", "CPU"] as const) {
+    try {
+      faceLandmarker = await FaceLandmarker.createFromOptions(vision, {
+        baseOptions: { modelAssetPath: MODEL_URL, delegate },
+        runningMode: mode,
+        numFaces: 1,
+        outputFacialTransformationMatrixes: false,
+        outputFaceBlendshapes: false,
+      });
+      currentMode = mode;
+      return faceLandmarker;
+    } catch (e) {
+      if (delegate === "CPU") throw e;
+      console.warn("GPU delegate failed, falling back to CPU:", e);
+    }
+  }
+
+  throw new Error("FaceLandmarker の初期化に失敗しました");
+}
 
 export async function initFaceLandmarker(): Promise<FaceLandmarker> {
-  if (faceLandmarker) return faceLandmarker;
+  return getFaceLandmarker("IMAGE");
+}
 
-  const vision = await FilesetResolver.forVisionTasks(
-    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
-  );
-
-  faceLandmarker = await FaceLandmarker.createFromOptions(vision, {
-    baseOptions: {
-      modelAssetPath:
-        "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
-      delegate: "GPU",
-    },
-    runningMode: "IMAGE",
-    numFaces: 1,
-    outputFacialTransformationMatrixes: false,
-    outputFaceBlendshapes: false,
-  });
-
-  return faceLandmarker;
+export async function initFaceLandmarkerVideo(): Promise<FaceLandmarker> {
+  return getFaceLandmarker("VIDEO");
 }
 
 function distance(
