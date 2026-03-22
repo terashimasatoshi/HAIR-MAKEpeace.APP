@@ -6,9 +6,56 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Scissors, Star, Check, Sparkles, Share2, ChevronLeft, Loader2 } from "lucide-react";
+import { Scissors, Star, Check, Sparkles, Share2, ChevronLeft, Loader2, ImageIcon } from "lucide-react";
 import { motion } from "framer-motion";
 import { useCounseling } from "@/contexts/CounselingContext";
+
+// 髪型画像生成フック
+function useHairstyleImage() {
+    const [images, setImages] = useState<Record<number, string>>({});
+    const [loading, setLoading] = useState<Record<number, boolean>>({});
+    const [errors, setErrors] = useState<Record<number, string>>({});
+
+    const generate = async (
+        idx: number,
+        style: { title: string; desc: string },
+        color: { name: string; code: string },
+        faceShape: string,
+        aiAnalysis: string
+    ) => {
+        setLoading((prev) => ({ ...prev, [idx]: true }));
+        setErrors((prev) => ({ ...prev, [idx]: '' }));
+        try {
+            const res = await fetch('/api/generate-hairstyle-image', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    styleTitle: style.title,
+                    styleDesc: style.desc,
+                    colorName: color.name,
+                    colorCode: color.code,
+                    faceShape,
+                    aiAnalysis,
+                }),
+            });
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error || '画像生成に失敗しました');
+            }
+            const data = await res.json();
+            setImages((prev) => ({
+                ...prev,
+                [idx]: `data:${data.mimeType};base64,${data.image}`,
+            }));
+        } catch (e: any) {
+            setErrors((prev) => ({ ...prev, [idx]: e.message }));
+        } finally {
+            setLoading((prev) => ({ ...prev, [idx]: false }));
+        }
+    };
+
+    return { images, loading, errors, generate };
+}
 
 // Mock Data from AI
 // Mock Data Generator based on Matching Knowledge
@@ -129,6 +176,7 @@ export default function AiProposalPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const hairstyleImage = useHairstyleImage();
 
     useEffect(() => {
         const fetchSuggestion = async () => {
@@ -300,20 +348,70 @@ export default function AiProposalPage() {
                         <span className="font-bold text-lg">似合う顔周りスタイル</span>
                     </h3>
                     <div className="space-y-4">
-                        {displayData.styles?.map((style: any, idx: number) => (
-                            <Card key={idx} className="overflow-hidden border-none shadow-md group">
-                                {/* Removed Image Placeholder as requested - Text Only Mode */}
-                                <CardContent className="p-5 bg-white flex items-start gap-4">
-                                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                                        <Scissors className="h-5 w-5 text-primary" />
-                                    </div>
-                                    <div>
-                                        <h4 className="font-bold mb-1 text-primary text-base">{style.title}</h4>
-                                        <p className="text-sm text-gray-600 leading-relaxed">{style.desc}</p>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        ))}
+                        {displayData.styles?.map((style: any, idx: number) => {
+                            const firstColor = displayData.colors?.[0] || { name: 'ナチュラルブラウン', code: '#8B6A56' };
+                            const generatedImage = hairstyleImage.images[idx];
+                            const isGenerating = hairstyleImage.loading[idx];
+                            const genError = hairstyleImage.errors[idx];
+
+                            return (
+                                <Card key={idx} className="overflow-hidden border-none shadow-md group">
+                                    {/* AI生成画像 */}
+                                    {generatedImage && (
+                                        <div className="relative w-full aspect-[4/3] bg-gray-100">
+                                            <img
+                                                src={generatedImage}
+                                                alt={`${style.title}のイメージ`}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        </div>
+                                    )}
+                                    <CardContent className="p-5 bg-white">
+                                        <div className="flex items-start gap-4">
+                                            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                                                <Scissors className="h-5 w-5 text-primary" />
+                                            </div>
+                                            <div className="flex-1">
+                                                <h4 className="font-bold mb-1 text-primary text-base">{style.title}</h4>
+                                                <p className="text-sm text-gray-600 leading-relaxed">{style.desc}</p>
+                                            </div>
+                                        </div>
+                                        {/* 画像生成ボタン */}
+                                        <button
+                                            onClick={() => hairstyleImage.generate(
+                                                idx,
+                                                style,
+                                                firstColor,
+                                                displayData.summary?.faceShape || '卵型',
+                                                displayData.aiAnalysis || ''
+                                            )}
+                                            disabled={isGenerating}
+                                            className="mt-3 w-full inline-flex items-center justify-center gap-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 disabled:from-gray-300 disabled:to-gray-400 text-white text-sm font-bold py-2.5 px-4 rounded-full transition-all"
+                                        >
+                                            {isGenerating ? (
+                                                <>
+                                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                                    イメージ生成中...
+                                                </>
+                                            ) : generatedImage ? (
+                                                <>
+                                                    <ImageIcon className="h-4 w-4" />
+                                                    別のイメージを生成
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <ImageIcon className="h-4 w-4" />
+                                                    AIでイメージを見る
+                                                </>
+                                            )}
+                                        </button>
+                                        {genError && (
+                                            <p className="text-xs text-red-500 mt-2 text-center">{genError}</p>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            );
+                        })}
                     </div>
                 </motion.div>
 
