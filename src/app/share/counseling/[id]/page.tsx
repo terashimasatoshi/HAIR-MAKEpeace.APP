@@ -154,6 +154,17 @@ export default async function ShareCounselingPage({
               AIおすすめ提案
             </h3>
 
+            {/* AIスタイルシート画像 */}
+            {aiSuggestion.styleSheetImageUrl && (
+              <div className="mb-4 rounded-xl overflow-hidden border border-[#e4e4e7]/50">
+                <img
+                  src={aiSuggestion.styleSheetImageUrl as string}
+                  alt="AIヘアスタイル提案シート"
+                  className="w-full h-auto"
+                />
+              </div>
+            )}
+
             <div className="space-y-3">
               {aiSuggestion.colors && aiSuggestion.colors.length > 0 && (
                 <div>

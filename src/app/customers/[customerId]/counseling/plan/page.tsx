@@ -9,53 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Scissors, Star, Check, Sparkles, Share2, ChevronLeft, Loader2, ImageIcon } from "lucide-react";
 import { motion } from "framer-motion";
 import { useCounseling } from "@/contexts/CounselingContext";
-
-// 髪型画像生成フック
-function useHairstyleImage() {
-    const [images, setImages] = useState<Record<number, string>>({});
-    const [loading, setLoading] = useState<Record<number, boolean>>({});
-    const [errors, setErrors] = useState<Record<number, string>>({});
-
-    const generate = async (
-        idx: number,
-        style: { title: string; desc: string },
-        color: { name: string; code: string },
-        faceShape: string,
-        aiAnalysis: string
-    ) => {
-        setLoading((prev) => ({ ...prev, [idx]: true }));
-        setErrors((prev) => ({ ...prev, [idx]: '' }));
-        try {
-            const res = await fetch('/api/generate-hairstyle-image', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    styleTitle: style.title,
-                    styleDesc: style.desc,
-                    colorName: color.name,
-                    colorCode: color.code,
-                    faceShape,
-                    aiAnalysis,
-                }),
-            });
-            if (!res.ok) {
-                const err = await res.json();
-                throw new Error(err.error || '画像生成に失敗しました');
-            }
-            const data = await res.json();
-            setImages((prev) => ({
-                ...prev,
-                [idx]: `data:${data.mimeType};base64,${data.image}`,
-            }));
-        } catch (e: any) {
-            setErrors((prev) => ({ ...prev, [idx]: e.message }));
-        } finally {
-            setLoading((prev) => ({ ...prev, [idx]: false }));
-        }
-    };
-
-    return { images, loading, errors, generate };
-}
+import { supabase } from "@/lib/supabase";
 
 // Mock Data from AI
 // Mock Data Generator based on Matching Knowledge
@@ -176,7 +130,10 @@ export default function AiProposalPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const hairstyleImage = useHairstyleImage();
+    const [styleSheetImage, setStyleSheetImage] = useState<string | null>(null);
+    const [styleSheetBase64, setStyleSheetBase64] = useState<{ data: string; mimeType: string } | null>(null);
+    const [isGeneratingSheet, setIsGeneratingSheet] = useState(false);
+    const [sheetError, setSheetError] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchSuggestion = async () => {
@@ -337,81 +294,99 @@ export default function AiProposalPage() {
                     </div>
                 </motion.div>
 
-                {/* 4. Recommended Styles */}
+                {/* 4. AI Style Sheet Generation */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: 0.4 }}
                 >
+                    {/* 生成されたスタイルシート */}
+                    {styleSheetImage && (
+                        <Card className="overflow-hidden border-none shadow-lg mb-6">
+                            <div className="relative w-full bg-gray-50">
+                                <img
+                                    src={styleSheetImage}
+                                    alt="AIヘアスタイル提案シート"
+                                    className="w-full h-auto"
+                                />
+                            </div>
+                        </Card>
+                    )}
+
+                    {/* シート生成ボタン */}
+                    <button
+                        onClick={async () => {
+                            setIsGeneratingSheet(true);
+                            setSheetError(null);
+                            try {
+                                const res = await fetch('/api/generate-hairstyle-image', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        faceShape: displayData.summary?.faceShape || '卵型',
+                                        personalColor: displayData.summary?.personalColor || '',
+                                        styles: displayData.styles || [],
+                                        colors: displayData.colors || [],
+                                        advice: displayData.advice || [],
+                                        aiAnalysis: displayData.aiAnalysis || '',
+                                    }),
+                                });
+                                if (!res.ok) {
+                                    const err = await res.json();
+                                    throw new Error(err.error || '画像生成に失敗しました');
+                                }
+                                const result = await res.json();
+                                setStyleSheetImage(`data:${result.mimeType};base64,${result.image}`);
+                                setStyleSheetBase64({ data: result.image, mimeType: result.mimeType });
+                            } catch (e: any) {
+                                setSheetError(e.message);
+                            } finally {
+                                setIsGeneratingSheet(false);
+                            }
+                        }}
+                        disabled={isGeneratingSheet}
+                        className="w-full mb-6 inline-flex items-center justify-center gap-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 disabled:from-gray-300 disabled:to-gray-400 text-white text-base font-bold py-4 px-6 rounded-2xl transition-all shadow-lg"
+                    >
+                        {isGeneratingSheet ? (
+                            <>
+                                <Loader2 className="h-5 w-5 animate-spin" />
+                                スタイルシート生成中...
+                            </>
+                        ) : styleSheetImage ? (
+                            <>
+                                <ImageIcon className="h-5 w-5" />
+                                スタイルシートを再生成
+                            </>
+                        ) : (
+                            <>
+                                <ImageIcon className="h-5 w-5" />
+                                AIでスタイルシートを作成
+                            </>
+                        )}
+                    </button>
+                    {sheetError && (
+                        <p className="text-sm text-red-500 text-center mb-4">{sheetError}</p>
+                    )}
+
+                    {/* スタイル一覧（テキスト） */}
                     <h3 className="section-title mb-4 flex items-center gap-2">
                         <Scissors className="h-5 w-5 text-accent" />
                         <span className="font-bold text-lg">似合う顔周りスタイル</span>
                     </h3>
                     <div className="space-y-4">
-                        {displayData.styles?.map((style: any, idx: number) => {
-                            const firstColor = displayData.colors?.[0] || { name: 'ナチュラルブラウン', code: '#8B6A56' };
-                            const generatedImage = hairstyleImage.images[idx];
-                            const isGenerating = hairstyleImage.loading[idx];
-                            const genError = hairstyleImage.errors[idx];
-
-                            return (
-                                <Card key={idx} className="overflow-hidden border-none shadow-md group">
-                                    {/* AI生成画像 */}
-                                    {generatedImage && (
-                                        <div className="relative w-full aspect-[4/3] bg-gray-100">
-                                            <img
-                                                src={generatedImage}
-                                                alt={`${style.title}のイメージ`}
-                                                className="w-full h-full object-cover"
-                                            />
-                                        </div>
-                                    )}
-                                    <CardContent className="p-5 bg-white">
-                                        <div className="flex items-start gap-4">
-                                            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                                                <Scissors className="h-5 w-5 text-primary" />
-                                            </div>
-                                            <div className="flex-1">
-                                                <h4 className="font-bold mb-1 text-primary text-base">{style.title}</h4>
-                                                <p className="text-sm text-gray-600 leading-relaxed">{style.desc}</p>
-                                            </div>
-                                        </div>
-                                        {/* 画像生成ボタン */}
-                                        <button
-                                            onClick={() => hairstyleImage.generate(
-                                                idx,
-                                                style,
-                                                firstColor,
-                                                displayData.summary?.faceShape || '卵型',
-                                                displayData.aiAnalysis || ''
-                                            )}
-                                            disabled={isGenerating}
-                                            className="mt-3 w-full inline-flex items-center justify-center gap-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 disabled:from-gray-300 disabled:to-gray-400 text-white text-sm font-bold py-2.5 px-4 rounded-full transition-all"
-                                        >
-                                            {isGenerating ? (
-                                                <>
-                                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                                    イメージ生成中...
-                                                </>
-                                            ) : generatedImage ? (
-                                                <>
-                                                    <ImageIcon className="h-4 w-4" />
-                                                    別のイメージを生成
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <ImageIcon className="h-4 w-4" />
-                                                    AIでイメージを見る
-                                                </>
-                                            )}
-                                        </button>
-                                        {genError && (
-                                            <p className="text-xs text-red-500 mt-2 text-center">{genError}</p>
-                                        )}
-                                    </CardContent>
-                                </Card>
-                            );
-                        })}
+                        {displayData.styles?.map((style: any, idx: number) => (
+                            <Card key={idx} className="overflow-hidden border-none shadow-md">
+                                <CardContent className="p-5 bg-white flex items-start gap-4">
+                                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                                        <Scissors className="h-5 w-5 text-primary" />
+                                    </div>
+                                    <div>
+                                        <h4 className="font-bold mb-1 text-primary text-base">{style.title}</h4>
+                                        <p className="text-sm text-gray-600 leading-relaxed">{style.desc}</p>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        ))}
                     </div>
                 </motion.div>
 
@@ -458,8 +433,37 @@ export default function AiProposalPage() {
                     onClick={async () => {
                         setIsSaving(true);
                         try {
-                            // Supabaseにカウンセリングデータを保存
-                            await saveToSupabase(customerId, proposal);
+                            // スタイルシート画像をSupabase Storageにアップロード
+                            let aiSuggestionWithImage = { ...proposal };
+                            if (styleSheetBase64) {
+                                try {
+                                    const ext = styleSheetBase64.mimeType === 'image/png' ? 'png' : 'jpg';
+                                    const filePath = `ai-style-sheets/${customerId}/${Date.now()}.${ext}`;
+                                    const byteString = atob(styleSheetBase64.data);
+                                    const ab = new ArrayBuffer(byteString.length);
+                                    const ia = new Uint8Array(ab);
+                                    for (let i = 0; i < byteString.length; i++) {
+                                        ia[i] = byteString.charCodeAt(i);
+                                    }
+                                    const blob = new Blob([ab], { type: styleSheetBase64.mimeType });
+
+                                    const { error: uploadError } = await supabase.storage
+                                        .from('treatment-photos')
+                                        .upload(filePath, blob, { contentType: styleSheetBase64.mimeType });
+
+                                    if (!uploadError) {
+                                        const { data: urlData } = supabase.storage
+                                            .from('treatment-photos')
+                                            .getPublicUrl(filePath);
+                                        aiSuggestionWithImage.styleSheetImageUrl = urlData.publicUrl;
+                                    } else {
+                                        console.error('Style sheet upload error:', uploadError);
+                                    }
+                                } catch (uploadErr) {
+                                    console.error('Style sheet upload failed:', uploadErr);
+                                }
+                            }
+                            await saveToSupabase(customerId, aiSuggestionWithImage);
                         } catch (err) {
                             console.error('Save error:', err);
                         }

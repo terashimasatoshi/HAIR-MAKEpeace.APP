@@ -1,12 +1,23 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextResponse } from 'next/server';
 
+interface StyleItem {
+  title: string;
+  desc: string;
+}
+
+interface ColorItem {
+  name: string;
+  code: string;
+  desc: string;
+}
+
 interface GenerateImageRequest {
-  styleTitle: string;
-  styleDesc: string;
-  colorName: string;
-  colorCode: string;
   faceShape: string;
+  personalColor: string;
+  styles: StyleItem[];
+  colors: ColorItem[];
+  advice: string[];
   aiAnalysis: string;
 }
 
@@ -67,23 +78,51 @@ export async function POST(request: Request) {
 }
 
 function buildPrompt(data: GenerateImageRequest): string {
-  return `あなたはプロの美容師向けヘアスタイルリファレンス写真を生成するAIです。
+  const stylesText = data.styles
+    .map((s, i) => `${i + 1}. ${s.title}：${s.desc}`)
+    .join('\n');
 
-以下の条件に合致するヘアスタイルの写真を1枚生成してください。
+  const colorsText = data.colors
+    .map((c) => `・${c.name}（${c.code}）- ${c.desc}`)
+    .join('\n');
+
+  const adviceText = data.advice
+    .map((a) => `・${a}`)
+    .join('\n');
+
+  return `あなたは美容室のカウンセリングシート用イラストを描くプロのイラストレーターです。
+以下の情報をもとに、お客様に提案するヘアスタイルを1枚のイラストシートにまとめてください。
 
 【顔型】${data.faceShape}
-【ヘアカラー】${data.colorName}（${data.colorCode}）
-【スタイル名】${data.styleTitle}
-【スタイルの特徴】${data.styleDesc}
-【スタイリングの詳細】${data.aiAnalysis}
+【パーソナルカラー】${data.personalColor}
 
-写真の条件：
-- 日本人女性のヘアスタイル写真
-- 美容室のスタイルブック（ヘアカタログ）に掲載されるようなプロフェッショナルな写真
-- やや斜め前からのアングル（顔周りのシルエットがわかるように）
-- 明るく自然なライティング
-- 白〜薄いグレーの背景
-- 顔はぼかすか横顔にし、髪型に注目させる
-- 髪のツヤ感・質感がリアルに伝わるように
-- 指定のヘアカラーが正確に反映されていること`;
+【おすすめスタイル】
+${stylesText}
+
+【おすすめカラー】
+${colorsText}
+
+【スタイリングのコツ】
+${adviceText}
+
+【AIからのアドバイス】
+${data.aiAnalysis}
+
+以下のレイアウトと条件でイラストシートを1枚生成してください：
+
+レイアウト：
+- 上部にリボン風バナーで「${data.faceShape}×${data.personalColor} 似合うヘアスタイル」とタイトル
+- 中央に1つ目のおすすめスタイル「${data.styles[0]?.title}」を大きくメインで描く
+- メインの左右に2つ目・3つ目のスタイルを小さめに描き、それぞれスタイル名のラベルをつける
+- 左下に「スタイリングのコツ」枠を設けて箇条書き
+- 右下におすすめカラーをハート型のカラースウォッチで表示
+
+イラストの条件：
+- 日本人女性のヘアスタイルイラスト（水彩画風・温かみのあるタッチ）
+- 背景はクリーム色〜ベージュ系の紙のようなテクスチャ
+- 花・星・キラキラなどのデコレーション要素を散りばめる
+- 各スタイル名はラベルで見やすく表示
+- 美容室のカウンセリングシートとしてプロフェッショナルかつ親しみやすいデザイン
+- 髪のツヤ感・質感・カラーがしっかり伝わるように
+- 顔は正面〜やや斜めで描き、髪型のシルエットが分かるようにする`;
 }
