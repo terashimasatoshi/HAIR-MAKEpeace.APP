@@ -13,6 +13,12 @@ interface ColorItem {
 }
 
 interface GenerateImageRequest {
+  gender?: string;
+  customerName?: string;
+  date?: string;
+  stylistName?: string;
+  concerns?: string[];
+  damageLevel?: number;
   faceShape: string;
   personalColor: string;
   styles: StyleItem[];
@@ -90,12 +96,40 @@ function buildPrompt(data: GenerateImageRequest): string {
     .map((a) => `・${a}`)
     .join('\n');
 
-  return `あなたは美容室のカウンセリングシート用イラストを描くプロのイラストレーターです。
-以下の情報をもとに、お客様に提案するヘアスタイルを1枚のイラストシートにまとめてください。
+  const isMale = data.gender === 'male';
+  const genderLabel = isMale ? '男性' : '女性';
+  const personDesc = isMale ? '日本人男性' : '日本人女性';
+  const decoDesc = isMale
+    ? 'シンプルで洗練されたライン・幾何学模様など控えめなデコレーション'
+    : '花・星・キラキラなど華やかなデコレーション要素を散りばめる';
+  const swatchShape = isMale ? '丸型' : 'ハート型';
 
+  const concernsText = data.concerns?.length
+    ? data.concerns.join('・')
+    : 'なし';
+  const damageLevelText = data.damageLevel
+    ? `Lv.${data.damageLevel}/5`
+    : '未診断';
+  const customerName = data.customerName || 'お客様';
+  const dateText = data.date || '';
+  const stylistText = data.stylistName || '';
+
+  return `あなたは美容室「HAIR & MAKE peace」のカウンセリングカード用イラストを描くプロのイラストレーターです。
+以下の情報をもとに、${genderLabel}のお客様への総合カウンセリングカードを1枚の縦長イラストにまとめてください。
+
+━━━━━ お客様情報 ━━━━━
+【お名前】${customerName} 様
+【日付】${dateText}
+【担当】${stylistText}
+【性別】${genderLabel}
+【お悩み】${concernsText}
+【ダメージレベル】${damageLevelText}
+
+━━━━━ 診断結果 ━━━━━
 【顔型】${data.faceShape}
 【パーソナルカラー】${data.personalColor}
 
+━━━━━ AI提案 ━━━━━
 【おすすめスタイル】
 ${stylesText}
 
@@ -108,21 +142,48 @@ ${adviceText}
 【AIからのアドバイス】
 ${data.aiAnalysis}
 
-以下のレイアウトと条件でイラストシートを1枚生成してください：
+━━━━━ デザイン指示 ━━━━━
 
-レイアウト：
-- 上部にリボン風バナーで「${data.faceShape}×${data.personalColor} 似合うヘアスタイル」とタイトル
-- 中央に1つ目のおすすめスタイル「${data.styles[0]?.title}」を大きくメインで描く
-- メインの左右に2つ目・3つ目のスタイルを小さめに描き、それぞれスタイル名のラベルをつける
-- 左下に「スタイリングのコツ」枠を設けて箇条書き
-- 右下におすすめカラーをハート型のカラースウォッチで表示
+## 画像仕様
+- 縦長（9:16のアスペクト比、スマートフォン全画面表示向け）
+- 解像度は高めに
 
-イラストの条件：
-- 日本人女性のヘアスタイルイラスト（水彩画風・温かみのあるタッチ）
+## レイアウト（上から下へ）
+
+### ① ヘッダー帯（最上部）
+- 「HAIR & MAKE peace」ロゴ風テキスト
+- 「Counseling Report」サブタイトル
+- 日付「${dateText}」と担当「${stylistText}」を小さく
+
+### ② お客様プロフィール帯
+- 「${customerName} 様」をエレガントに表示
+- 診断バッジ風に：顔型「${data.faceShape}」・パーソナルカラー「${data.personalColor}」・ダメージ「${damageLevelText}」
+- お悩みを小さなタグ風に：${concernsText}
+
+### ③ スタイル提案エリア（メイン・最も大きく）
+- 中央に1つ目のスタイル「${data.styles[0]?.title}」を大きくメインイラストで描く
+- 左右に2つ目・3つ目のスタイルをやや小さめに描く
+- 各スタイルにスタイル名ラベルと一言説明
+
+### ④ カラーパレットエリア
+- おすすめカラーを${swatchShape}のカラースウォッチで横並び表示
+- 各色にカラー名ラベル付き
+
+### ⑤ アドバイスエリア
+- 「スタイリングのコツ」を箇条書きで
+- 手書き風のメモスタイル
+
+### ⑥ フッター帯（最下部）
+- 「HAIR & MAKE peace」
+- 「Thank you for visiting!」
+
+## イラストの条件
+- ${personDesc}のヘアスタイルイラスト（水彩画風・温かみのあるタッチ）
 - 背景はクリーム色〜ベージュ系の紙のようなテクスチャ
-- 花・星・キラキラなどのデコレーション要素を散りばめる
-- 各スタイル名はラベルで見やすく表示
-- 美容室のカウンセリングシートとしてプロフェッショナルかつ親しみやすいデザイン
+- ${decoDesc}
+- 各セクションは枠線や背景色で区切り、視認性を確保
+- 美容室のカウンセリングカードとしてプロフェッショナルかつ親しみやすいデザイン
 - 髪のツヤ感・質感・カラーがしっかり伝わるように
-- 顔は正面〜やや斜めで描き、髪型のシルエットが分かるようにする`;
+- 顔は正面〜やや斜めで描き、髪型のシルエットが分かるようにする
+- テキストは日本語で、読みやすいフォントサイズで描く`;
 }

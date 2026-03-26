@@ -4,7 +4,18 @@ import { MATCHING_KNOWLEDGE } from '@/lib/knowledge';
 
 export async function POST(request: Request) {
   try {
-    const { faceShape, personalColor, personalColorBase, concerns, request: customerRequest } = await request.json();
+    const { gender, age, faceShape, personalColor, personalColorBase, concerns, request: customerRequest } = await request.json();
+    const genderLabel = gender === 'male' ? '男性' : '女性';
+    const ageLabel = age ? `${age}歳` : '不明';
+    const now = new Date();
+    const month = now.getMonth() + 1;
+    const SEASON_MAP: Record<number, string> = {
+      1: '冬（1月）', 2: '冬（2月）', 3: '春（3月）',
+      4: '春（4月）', 5: '春（5月）', 6: '夏（6月）',
+      7: '夏（7月）', 8: '夏（8月）', 9: '秋（9月）',
+      10: '秋（10月）', 11: '秋（11月）', 12: '冬（12月）',
+    };
+    const currentSeason = SEASON_MAP[month];
 
     // Check if API key is present, otherwise return mock
     if (!process.env.ANTHROPIC_API_KEY) {
@@ -40,6 +51,9 @@ Based on the following customer profile and the "Matching Knowledge", suggest su
 ${MATCHING_KNOWLEDGE}
 
 # Customer Profile
+- Gender: ${genderLabel}
+- Age: ${ageLabel}
+- Current Season: ${currentSeason}
 - Face Shape: ${faceShape} (Map this to one of: 面長, 丸顔, ベース型, 逆三角形. If "egg" or others, suggest generally balanced styles)
 - Personal Color: ${personalColor}
 - Personal Color Base: ${personalColorBase || 'unknown'}
@@ -48,10 +62,13 @@ ${MATCHING_KNOWLEDGE}
 
 # Instructions
 0. If "Today's Request" is provided, prioritize it first and adjust all suggestions to match it.
-1. Analyze the customer's face shape using the Matching Knowledge.
-2. Suggest "Out Form", "In Form", and "Bang" adjustments based on the knowledge.
-3. Recommend 3 specific hair colors and 3 styles.
-4. Provide concrete styling advice.
+1. IMPORTANT: The customer is ${genderLabel}. All color suggestions, style suggestions, and advice MUST be appropriate for ${genderLabel}. For male customers, suggest masculine styles (short cuts, fades, textured styles, etc.) and natural/subtle color tones. For female customers, suggest a wider range of styles and colors.
+2. The customer's age is ${ageLabel}. Suggest styles and colors appropriate for their age group. For example: 20s can handle bolder trends, 30-40s balance trend with sophistication, 50s+ prioritize elegance, volume, and gray coverage if needed. Never suggest overly youthful styles for older customers or overly mature styles for younger ones.
+3. Consider the current season (${currentSeason}). Reflect seasonal trends, seasonal color tones, and seasonally appropriate styling in your suggestions. For example: lighter/brighter tones for spring/summer, warmer/deeper tones for autumn/winter.
+4. Analyze the customer's face shape using the Matching Knowledge.
+5. Suggest "Out Form", "In Form", and "Bang" adjustments based on the knowledge.
+6. Recommend 3 specific hair colors and 3 styles.
+7. Provide concrete styling advice.
 
 Output must be a valid JSON object with the following structure:
 {

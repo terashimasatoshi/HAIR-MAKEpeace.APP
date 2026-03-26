@@ -1,14 +1,12 @@
-type StoreKey = 'takayanagi' | 'hanado';
+export type StoreKey = 'takayanagi' | 'hanado';
 
-const PLACE_IDS: Record<StoreKey, string | undefined> = {
-  takayanagi: process.env.NEXT_PUBLIC_PLACE_ID_TAKAYANAGI,
-  hanado: process.env.NEXT_PUBLIC_PLACE_ID_HANADO,
+const REVIEW_URLS: Record<StoreKey, string> = {
+  takayanagi: 'https://g.page/r/Cfo_vaI3qVFhEAE/review',
+  hanado: 'https://g.page/r/CeRGyjes7J_QEAE/review',
 };
 
 export const getReviewUrl = (storeKey: StoreKey): string | null => {
-  const placeId = PLACE_IDS[storeKey];
-  if (!placeId) return null;
-  return `https://search.google.com/local/writereview?placeid=${placeId}`;
+  return REVIEW_URLS[storeKey] || null;
 };
 
 // store_id からストアキーを判定

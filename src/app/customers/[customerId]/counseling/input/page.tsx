@@ -210,7 +210,7 @@ export default function CounselingInputPage() {
     };
 
     // ... existing helpers ...
-    const { concerns: selectedConcerns, damageLevel, personalColor, faceShape, request } = data;
+    const { gender, concerns: selectedConcerns, damageLevel, personalColor, faceShape, request } = data;
     const personalColorBase = personalColor?.base || null;
     const personalColorSeason = personalColor?.season || "";
     // Re-declare existing helpers to match file context if needed, but since we modify component body:
@@ -636,6 +636,33 @@ export default function CounselingInputPage() {
                             ))}
                         </SelectContent>
                     </Select>
+                </div>
+
+                {/* 3.5 Gender Selection */}
+                <div className="bg-white rounded-xl shadow-sm p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                        <User className="h-5 w-5 text-primary" />
+                        <span className="font-bold">性別</span>
+                    </div>
+                    <div className="flex gap-3">
+                        {([
+                            { id: 'female', label: '女性' },
+                            { id: 'male', label: '男性' },
+                        ] as const).map(({ id, label }) => (
+                            <button
+                                key={id}
+                                onClick={() => updateData({ gender: id })}
+                                className={cn(
+                                    "flex-1 py-3 rounded-xl text-sm font-bold transition-all duration-200 border",
+                                    gender === id
+                                        ? "bg-primary text-white border-primary shadow-md"
+                                        : "bg-secondary/5 text-foreground border-transparent hover:bg-secondary/10"
+                                )}
+                            >
+                                {label}
+                            </button>
+                        ))}
+                    </div>
                 </div>
 
                 {/* 4. Concerns */}

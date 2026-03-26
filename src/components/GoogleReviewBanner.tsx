@@ -1,23 +1,39 @@
 'use client';
 
 import { useState } from 'react';
-import { Star, Sparkles, ClipboardCopy, Check, Loader2 } from 'lucide-react';
+import { Star, Sparkles, ClipboardCopy, Check, Loader2, MapPin } from 'lucide-react';
+
+type StoreKey = 'takayanagi' | 'hanado';
 
 interface GoogleReviewBannerProps {
-  reviewUrl: string;
-  storeName: string;
+  reviewUrlTakayanagi: string | null;
+  reviewUrlHanado: string | null;
+  defaultStore: StoreKey;
   menuNames: string[];
   concerns: string[];
 }
 
+const STORE_LABELS: Record<StoreKey, string> = {
+  takayanagi: '高柳店',
+  hanado: '花堂店',
+};
+
+const STORE_FULL_NAMES: Record<StoreKey, string> = {
+  takayanagi: 'HAIR&MAKE peace 高柳店',
+  hanado: 'HAIR&MAKE peace 花堂店',
+};
+
 const MAX_GENERATE_COUNT = 3;
 
-export function GoogleReviewBanner({ reviewUrl, storeName, menuNames, concerns }: GoogleReviewBannerProps) {
+export function GoogleReviewBanner({ reviewUrlTakayanagi, reviewUrlHanado, defaultStore, menuNames, concerns }: GoogleReviewBannerProps) {
+  const [selectedStore, setSelectedStore] = useState<StoreKey>(defaultStore);
   const [hitokoto, setHitokoto] = useState('');
   const [generatedReview, setGeneratedReview] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [generateCount, setGenerateCount] = useState(0);
+
+  const reviewUrl = selectedStore === 'takayanagi' ? reviewUrlTakayanagi : reviewUrlHanado;
 
   const handleGenerate = async () => {
     if (!hitokoto.trim() || isGenerating || generateCount >= MAX_GENERATE_COUNT) return;
@@ -27,19 +43,25 @@ export function GoogleReviewBanner({ reviewUrl, storeName, menuNames, concerns }
       const res = await fetch('/api/generate-review', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ hitokoto, storeName, menuNames, concerns }),
+        body: JSON.stringify({ hitokoto, storeName: STORE_FULL_NAMES[selectedStore], menuNames, concerns }),
       });
 
       if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || '生成に失敗しました');
+        let message = '生成に失敗しました';
+        try {
+          const err = await res.json();
+          if (err.error) message = err.error;
+        } catch {
+          // non-JSON response (e.g. HTML error page)
+        }
+        throw new Error(message);
       }
 
       const data = await res.json();
       setGeneratedReview(data.review);
       setGenerateCount((c) => c + 1);
-    } catch (e: any) {
-      alert(e.message || '生成に失敗しました');
+    } catch (e) {
+      alert(e instanceof Error ? e.message : '生成に失敗しました');
     } finally {
       setIsGenerating(false);
     }
@@ -67,6 +89,31 @@ export function GoogleReviewBanner({ reviewUrl, storeName, menuNames, concerns }
       <p className="text-sm text-[#555] leading-relaxed mb-5">
         よろしければ、Googleでご感想をお聞かせください。
       </p>
+
+      {/* 店舗選択 */}
+      {reviewUrlTakayanagi && reviewUrlHanado && (
+        <div className="mb-5">
+          <p className="text-xs text-[#777] mb-2 flex items-center justify-center gap-1">
+            <MapPin className="w-3.5 h-3.5" />
+            ご来店の店舗を選択してください
+          </p>
+          <div className="flex gap-2 justify-center">
+            {(['takayanagi', 'hanado'] as StoreKey[]).map((key) => (
+              <button
+                key={key}
+                onClick={() => setSelectedStore(key)}
+                className={`px-5 py-2 rounded-full text-sm font-bold transition-colors ${
+                  selectedStore === key
+                    ? 'bg-[#4A7C59] text-white shadow-md'
+                    : 'bg-white/70 text-[#555] border border-[#ccc] hover:bg-white'
+                }`}
+              >
+                {STORE_LABELS[key]}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* AI口コミ生成セクション */}
       <div className="bg-white/70 rounded-xl p-4 mb-5 text-left">
@@ -140,8 +187,9 @@ export function GoogleReviewBanner({ reviewUrl, storeName, menuNames, concerns }
 
       {/* Googleレビューボタン */}
       <button
-        onClick={() => window.open(reviewUrl, '_blank', 'noopener,noreferrer')}
-        className="inline-flex items-center gap-2 bg-[#C5A572] hover:bg-[#b8955f] text-white font-bold py-3 px-8 rounded-full transition-colors shadow-md"
+        onClick={() => reviewUrl && window.open(reviewUrl, '_blank', 'noopener,noreferrer')}
+        disabled={!reviewUrl}
+        className="inline-flex items-center gap-2 bg-[#C5A572] hover:bg-[#b8955f] disabled:bg-[#aaa] disabled:cursor-not-allowed text-white font-bold py-3 px-8 rounded-full transition-colors shadow-md"
       >
         <Star className="w-5 h-5 fill-current" />
         Googleで口コミを投稿する

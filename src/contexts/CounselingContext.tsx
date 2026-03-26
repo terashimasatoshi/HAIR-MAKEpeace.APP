@@ -18,7 +18,10 @@ type Customer = {
     phone?: string;
 };
 
+type Gender = 'female' | 'male' | '';
+
 type CounselingData = {
+    gender: Gender;
     concerns: string[];
     damageLevel: number;
     faceShape: string;
@@ -42,6 +45,7 @@ type CounselingContextType = {
 const CounselingContext = createContext<CounselingContextType | undefined>(undefined);
 
 const initialData: CounselingData = {
+    gender: '',
     concerns: [],
     damageLevel: 1,
     faceShape: '',
@@ -205,6 +209,7 @@ export function CounselingProvider({ children, customerId }: { children: ReactNo
                 .insert({
                     visit_id: visit.id,
                     customer_id: custId,
+                    gender: data.gender || 'female',
                     concerns: data.concerns,
                     damage_level: data.damageLevel,
                     face_shape: data.faceShape || null,

@@ -39,6 +39,7 @@ export function FaceDiagnosisModal({
   const [phase, setPhase] = useState<Phase>("camera");
   const [result, setResult] = useState<DiagnosisResult | null>(null);
   const [imageUrl, setImageUrl] = useState<string>("");
+  const [capturedSize, setCapturedSize] = useState<{ width: number; height: number }>({ width: 480, height: 360 });
   const [error, setError] = useState<string | null>(null);
 
   const handleCapture = useCallback(async (canvas: HTMLCanvasElement) => {
@@ -48,6 +49,7 @@ export function FaceDiagnosisModal({
     try {
       const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
       setImageUrl(dataUrl);
+      setCapturedSize({ width: canvas.width, height: canvas.height });
 
       const { landmarks, measurements } = await analyzeFace(canvas);
       const { scores, faceType } = calculateScores(measurements);
@@ -70,6 +72,7 @@ export function FaceDiagnosisModal({
   const handleRetry = useCallback(() => {
     setResult(null);
     setImageUrl("");
+    setCapturedSize({ width: 480, height: 360 });
     setError(null);
     setPhase("camera");
   }, []);
@@ -81,6 +84,7 @@ export function FaceDiagnosisModal({
         setPhase("camera");
         setResult(null);
         setImageUrl("");
+        setCapturedSize({ width: 480, height: 360 });
         setError(null);
       }
       onOpenChange(newOpen);
@@ -119,8 +123,8 @@ export function FaceDiagnosisModal({
             <FaceMeshOverlay
               imageUrl={imageUrl}
               landmarks={result.landmarks}
-              width={480}
-              height={360}
+              width={capturedSize.width}
+              height={capturedSize.height}
             />
 
             <div className="text-center">

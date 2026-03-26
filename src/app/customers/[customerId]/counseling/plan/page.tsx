@@ -124,7 +124,7 @@ export default function AiProposalPage() {
     const router = useRouter();
     const params = useParams();
     const customerId = params.customerId as string;
-    const { data, saveToSupabase, customer, isLoadingCustomer } = useCounseling();
+    const { data, saveToSupabase, customer, stylist, isLoadingCustomer } = useCounseling();
     const [selectedColor, setSelectedColor] = useState<any>(null);
     const [proposal, setProposal] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -158,6 +158,8 @@ export default function AiProposalPage() {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
+                        gender: data.gender || 'female',
+                        age: customer?.age || null,
                         faceShape: faceShapeLabel,
                         personalColor: effectivePersonalSeason || "spring (default)",
                         personalColorBase: effectivePersonalBase || "warm",
@@ -323,6 +325,12 @@ export default function AiProposalPage() {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({
+                                        gender: data.gender || 'female',
+                                        customerName: customer?.name || 'お客様',
+                                        date: new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' }),
+                                        stylistName: stylist?.name || '',
+                                        concerns: data.concerns || [],
+                                        damageLevel: data.damageLevel || 1,
                                         faceShape: displayData.summary?.faceShape || '卵型',
                                         personalColor: displayData.summary?.personalColor || '',
                                         styles: displayData.styles || [],
@@ -350,17 +358,17 @@ export default function AiProposalPage() {
                         {isGeneratingSheet ? (
                             <>
                                 <Loader2 className="h-5 w-5 animate-spin" />
-                                スタイルシート生成中...
+                                カウンセリングカード生成中...
                             </>
                         ) : styleSheetImage ? (
                             <>
                                 <ImageIcon className="h-5 w-5" />
-                                スタイルシートを再生成
+                                カウンセリングカードを再生成
                             </>
                         ) : (
                             <>
                                 <ImageIcon className="h-5 w-5" />
-                                AIでスタイルシートを作成
+                                AIでカウンセリングカードを作成
                             </>
                         )}
                     </button>
