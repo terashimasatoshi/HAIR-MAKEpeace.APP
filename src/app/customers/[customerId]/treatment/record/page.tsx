@@ -271,7 +271,7 @@ export default function TreatmentRecordPage() {
                     <ChevronLeft className="h-6 w-6" />
                 </Button>
                 <span className="font-bold">施術記録</span>
-                <Button variant="ghost" size="icon" onClick={() => router.push(`/customers/${customerId}/treatment/photos`)}>
+                <Button variant="ghost" size="icon" onClick={() => router.push(`/customers/${customerId}/complete`)}>
                     <ChevronRight className="h-6 w-6" />
                 </Button>
             </header>
@@ -381,8 +381,8 @@ export default function TreatmentRecordPage() {
                         } catch (err) {
                             console.error('Error:', err);
                         }
-                        // 保存の成否に関わらず次の画面へ遷移
-                        router.push(`/customers/${customerId}/treatment/photos`);
+                        // 保存の成否に関わらず完了画面へ遷移
+                        router.push(`/customers/${customerId}/complete`);
                     }}
                 >
                     {isSaving ? (

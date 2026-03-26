@@ -122,8 +122,8 @@ export default function PhotoRegistrationPage() {
         } catch (err) {
             console.error('Save error:', err);
         }
-        // 保存の成否に関わらず完了画面へ遷移
-        router.push(`/customers/${customerId}/complete`);
+        // 保存の成否に関わらず施術記録画面へ遷移
+        router.push(`/customers/${customerId}/treatment/record`);
     };
 
     const isComplete = photos.side && photos.back;
