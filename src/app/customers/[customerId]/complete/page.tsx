@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useCounseling } from "@/contexts/CounselingContext";
 
-import { CheckCircle2, Home, Calendar, ChevronLeft, ClipboardCopy, Check } from "lucide-react";
+import { CheckCircle2, Home, Calendar, ChevronLeft, ClipboardCopy, Check, Camera } from "lucide-react";
 import { motion } from "framer-motion";
 import { format, addWeeks } from 'date-fns';
 import { ja } from 'date-fns/locale';
@@ -146,6 +146,14 @@ export default function CompletePage() {
                 <Button
                     className="w-full h-12 text-lg shadow-md"
                     variant="default"
+                    onClick={() => router.push(`/customers/${customerId}/treatment/photos`)}
+                >
+                    <Camera className="mr-2 h-5 w-5" />
+                    仕上がり写真を撮影
+                </Button>
+                <Button
+                    className="w-full h-12"
+                    variant="outline"
                     onClick={() => router.push('/')}
                 >
                     <Home className="mr-2 h-5 w-5" />
