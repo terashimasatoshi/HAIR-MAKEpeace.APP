@@ -432,7 +432,7 @@ export default function AiProposalPage() {
             </main>
 
             {/* 6. Action Buttons */}
-            <div className="fixed bottom-0 w-full p-4 bg-white border-t border-border z-20 flex gap-3">
+            <div className="fixed bottom-0 w-full p-4 pb-safe-lg bg-white border-t border-border z-20 flex gap-3">
                 <Button variant="outline" className="flex-1 h-12 border-primary text-primary hover:bg-primary/5">
                     <Share2 className="mr-2 h-4 w-4" />
                     保存

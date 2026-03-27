@@ -18,10 +18,17 @@ export function FaceGuideOverlay({ faceDetected }: FaceGuideOverlayProps) {
     const parent = canvas.parentElement;
     if (!parent) return;
 
+    const dpr = window.devicePixelRatio || 1;
     const resize = () => {
-      canvas.width = parent.clientWidth;
-      canvas.height = parent.clientHeight;
-      draw(canvas, faceDetectedRef.current);
+      const w = parent.clientWidth;
+      const h = parent.clientHeight;
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      canvas.style.width = `${w}px`;
+      canvas.style.height = `${h}px`;
+      const ctx = canvas.getContext("2d");
+      if (ctx) ctx.scale(dpr, dpr);
+      draw(canvas, faceDetectedRef.current, w, h);
     };
 
     resize();
@@ -33,7 +40,10 @@ export function FaceGuideOverlay({ faceDetected }: FaceGuideOverlayProps) {
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (canvas) draw(canvas, faceDetected);
+    if (!canvas) return;
+    const parent = canvas.parentElement;
+    if (!parent) return;
+    draw(canvas, faceDetected, parent.clientWidth, parent.clientHeight);
   }, [faceDetected]);
 
   return (
@@ -44,19 +54,19 @@ export function FaceGuideOverlay({ faceDetected }: FaceGuideOverlayProps) {
   );
 }
 
-function draw(canvas: HTMLCanvasElement, faceDetected?: boolean) {
+function draw(canvas: HTMLCanvasElement, faceDetected?: boolean, cssW?: number, cssH?: number) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
 
-  const w = canvas.width;
-  const h = canvas.height;
+  const w = cssW || canvas.width;
+  const h = cssH || canvas.height;
 
   const ellipseW = w * 0.38;
   const ellipseH = h * 0.52;
   const cx = w / 2;
   const cy = h / 2;
 
-  ctx.clearRect(0, 0, w, h);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   // 暗いオーバーレイ
   ctx.fillStyle = "rgba(0, 0, 0, 0.4)";

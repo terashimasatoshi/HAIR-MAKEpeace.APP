@@ -179,7 +179,7 @@ export default function MenuSelectionPage() {
 
             {/* 5. Summary & Footer */}
             {(selectedMenus.length > 0) && (
-                <div className="fixed bottom-0 w-full bg-white border-t border-border z-20 shadow-[0_-5px_20px_rgba(0,0,0,0.05)]">
+                <div className="fixed bottom-0 w-full pb-safe bg-white border-t border-border z-20 shadow-[0_-5px_20px_rgba(0,0,0,0.05)]">
                     <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50">
                         <div className="text-sm">
                             <div className="flex justify-between items-center mb-1">

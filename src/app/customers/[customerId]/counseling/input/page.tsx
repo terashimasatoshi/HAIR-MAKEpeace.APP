@@ -965,7 +965,7 @@ export default function CounselingInputPage() {
             </main>
 
             {/* 9. Create Next Button */}
-            <div className="fixed bottom-0 w-full p-4 bg-white border-t border-border z-10">
+            <div className="fixed bottom-0 w-full p-4 pb-safe-lg bg-white border-t border-border z-10">
                 <Button
                     className="w-full text-lg h-12 shadow-md bg-gradient-to-r from-primary to-[#5C8D6D] hover:from-[#3D6949] hover:to-[#4A7C59]"
                     onClick={() => router.push(`/customers/${customerId}/counseling/menu`)}

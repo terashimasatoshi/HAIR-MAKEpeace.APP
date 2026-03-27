@@ -155,11 +155,17 @@ export default function PhotoRegistrationPage() {
                                     audio={false}
                                     ref={webcamRef}
                                     screenshotFormat="image/jpeg"
-                                    videoConstraints={{ facingMode: "environment" }}
+                                    screenshotQuality={0.92}
+                                    videoConstraints={{
+                                        facingMode: "environment",
+                                        width: { ideal: 1920 },
+                                        height: { ideal: 1080 },
+                                    }}
+                                    playsInline
                                     className="w-full object-cover"
                                 />
                             </div>
-                            <div className="p-8 pb-12 bg-black/50 backdrop-blur-sm flex justify-center items-center gap-8">
+                            <div className="p-8 pb-safe-lg bg-black/50 backdrop-blur-sm flex justify-center items-center gap-8">
                                 <p className="absolute top-[80%] text-white font-bold drop-shadow-md">
                                     {activeSide === 'side' ? '横から撮影' : '後ろから撮影'}
                                 </p>
@@ -248,7 +254,7 @@ export default function PhotoRegistrationPage() {
             </main>
 
             {/* Footer Button */}
-            <div className="fixed bottom-0 w-full p-4 bg-white border-t border-border z-20">
+            <div className="fixed bottom-0 w-full p-4 pb-safe-lg bg-white border-t border-border z-20">
                 <Button
                     className="w-full text-lg h-12 shadow-md bg-gradient-to-r from-primary to-[#5C8D6D]"
                     disabled={!isComplete || isSaving}

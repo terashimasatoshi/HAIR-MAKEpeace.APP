@@ -72,24 +72,49 @@ export function GoogleReviewBanner({ reviewUrlTakayanagi, reviewUrlHanado, defau
 
   const handleCopy = async () => {
     if (!generatedReview) return;
+    let copied = false;
     try {
+      // 方法1: Clipboard API (HTTPS環境)
       if (navigator.clipboard && window.isSecureContext) {
         await navigator.clipboard.writeText(generatedReview);
-      } else {
-        // Fallback for non-HTTPS (e.g. local dev, HTTP on mobile)
+        copied = true;
+      }
+    } catch {
+      // Clipboard API失敗 — フォールバックへ
+    }
+    if (!copied) {
+      try {
+        // 方法2: execCommand fallback
         const textarea = document.createElement('textarea');
         textarea.value = generatedReview;
+        textarea.setAttribute('readonly', '');
         textarea.style.position = 'fixed';
+        textarea.style.left = '-9999px';
         textarea.style.opacity = '0';
         document.body.appendChild(textarea);
-        textarea.select();
-        document.execCommand('copy');
+        // iOS Safari対策: setSelectionRangeを使う
+        textarea.focus();
+        textarea.setSelectionRange(0, textarea.value.length);
+        copied = document.execCommand('copy');
         document.body.removeChild(textarea);
+      } catch {
+        // execCommandも失敗
       }
+    }
+    if (copied) {
       setIsCopied(true);
       setTimeout(() => setIsCopied(false), 2000);
-    } catch {
-      alert('コピーに失敗しました');
+    } else {
+      // どちらも失敗した場合、テキストを選択状態にして手動コピーを促す
+      const reviewEl = document.getElementById('generated-review-text');
+      if (reviewEl) {
+        const range = document.createRange();
+        range.selectNodeContents(reviewEl);
+        const sel = window.getSelection();
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+      }
+      alert('自動コピーできませんでした。テキストを選択しましたので、長押しでコピーしてください。');
     }
   };
 
@@ -199,7 +224,7 @@ export function GoogleReviewBanner({ reviewUrlTakayanagi, reviewUrlHanado, defau
           <p className="text-sm font-bold text-[#333] mb-2 flex items-center gap-1.5">
             <span>💬</span> AIが考えた口コミ文
           </p>
-          <div className="bg-[#FDFBF7] rounded-lg p-4 text-sm text-[#333] leading-relaxed whitespace-pre-wrap border border-[#e4e4e7]">
+          <div id="generated-review-text" className="bg-[#FDFBF7] rounded-lg p-4 text-sm text-[#333] leading-relaxed whitespace-pre-wrap border border-[#e4e4e7] select-text">
             {generatedReview}
           </div>
           <button

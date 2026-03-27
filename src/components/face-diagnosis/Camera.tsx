@@ -52,8 +52,8 @@ export function Camera({ onCapture }: CameraProps) {
         mediaStream = await navigator.mediaDevices.getUserMedia({
           video: {
             facingMode: "user",
-            width: { ideal: 1280 },
-            height: { ideal: 960 },
+            width: { ideal: 1280, max: 1920 },
+            height: { ideal: 960, max: 1440 },
           },
           audio: false,
         });
@@ -74,6 +74,8 @@ export function Camera({ onCapture }: CameraProps) {
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
         videoRef.current.onloadedmetadata = () => {
+          // iOS Safari: autoPlayが効かない場合があるため明示的にplay()
+          videoRef.current?.play().catch(() => {});
           if (mounted) setIsReady(true);
         };
       }

@@ -32,8 +32,12 @@ export function FaceMeshOverlay({
 
     const img = new Image();
     img.onload = () => {
-      canvas.width = width;
-      canvas.height = height;
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+      ctx.scale(dpr, dpr);
 
       ctx.drawImage(img, 0, 0, width, height);
 

@@ -123,5 +123,26 @@
   }
   body {
     @apply bg-background text-foreground;
+    /* iOS: タップ時のハイライトを無効化 */
+    -webkit-tap-highlight-color: transparent;
+    /* iOS: safe area対応 */
+    padding-top: env(safe-area-inset-top);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
   }
+}
+
+/* iOS: overflow scrollコンテナの慣性スクロール */
+.overflow-y-auto,
+.overflow-x-auto,
+.overflow-auto {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* iOS: fixed bottom要素のsafe area対応 */
+.pb-safe {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+.pb-safe-lg {
+  padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
 }

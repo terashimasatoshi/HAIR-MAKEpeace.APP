@@ -185,7 +185,7 @@ export default function ExistingCustomerPage() {
             </main>
 
             {/* 4. New Registration Button */}
-            <div className="fixed bottom-0 w-full p-4 bg-white border-t border-border z-20">
+            <div className="fixed bottom-0 w-full p-4 pb-safe-lg bg-white border-t border-border z-20">
                 <Button
                     className="w-full text-lg h-12 shadow-md bg-secondary hover:bg-secondary/90 text-white"
                     onClick={() => router.push('/customers/new')}
