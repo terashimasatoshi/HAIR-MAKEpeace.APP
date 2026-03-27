@@ -8,14 +8,17 @@ export const FACE_TYPE_LABELS: Record<FaceType, string> = {
 };
 
 export interface FaceMeasurements {
-  widthRatio: number;
-  jawRatio: number;
-  chinAngle: number;
-  foreheadRatio: number;
+  widthRatio: number;       // faceWidth / faceLength
+  jawRatio: number;         // jawWidth / faceWidth
+  chinAngle: number;        // 顎の角度（度）
+  foreheadRatio: number;    // foreheadWidth / faceWidth
+  cheekboneRatio: number;   // cheekboneWidth / faceWidth
+  verticalBalance: number;  // midFace / lowerFace 比率
   faceLength: number;
   faceWidth: number;
   jawWidth: number;
   foreheadWidth: number;
+  cheekboneWidth: number;
 }
 
 export interface FaceScores {
@@ -30,4 +33,9 @@ export interface DiagnosisResult {
   scores: FaceScores;
   measurements: FaceMeasurements;
   landmarks: { x: number; y: number; z: number }[];
+  /** 判定信頼度 0〜100。1位と2位のスコア差が大きいほど高い */
+  confidence: number;
 }
+
+/** 信頼度しきい値: これ未満は「判定保留」 */
+export const CONFIDENCE_THRESHOLD = 15;

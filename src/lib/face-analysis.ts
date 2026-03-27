@@ -74,41 +74,85 @@ function angleBetween(
   return angleRad * (180 / Math.PI);
 }
 
+// MediaPipe Face Landmarker ランドマークID
+// 参考: https://github.com/google-ai-edge/mediapipe/blob/master/mediapipe/modules/face_geometry/data/canonical_face_model_uv_visualization.png
 export const LANDMARK_IDS = {
+  // 顔の上端（おでこ中央上部）— 顔長さの起点
+  faceTop: 10,
+  // 眉間（旧: browCenter）— 中顔面の起点
   browCenter: 9,
+  // 鼻下（上唇上端）— 中顔面と下顔面の境界
+  noseBase: 2,
+  // 顎先
   chin: 152,
+  // こめかみ（顔の最大幅）
   leftTemple: 234,
   rightTemple: 454,
+  // 頬骨（顔型判定で最重要）
+  leftCheekbone: 93,
+  rightCheekbone: 323,
+  // エラ（顎角）
   leftJaw: 172,
   rightJaw: 397,
-  leftForehead: 71,
-  rightForehead: 301,
+  // おでこ外側
+  leftForehead: 54,
+  rightForehead: 284,
+  // 顔の左右対称性チェック用
+  noseTip: 1,
+  leftEar: 234,
+  rightEar: 454,
 } as const;
 
 export function calculateFaceMetrics(
   landmarks: { x: number; y: number; z: number }[]
 ): FaceMeasurements {
-  const faceLength = distance(landmarks[LANDMARK_IDS.browCenter], landmarks[LANDMARK_IDS.chin]);
+  // 主要距離を計測
+  const faceLength = distance(landmarks[LANDMARK_IDS.faceTop], landmarks[LANDMARK_IDS.chin]);
   const faceWidth = distance(landmarks[LANDMARK_IDS.leftTemple], landmarks[LANDMARK_IDS.rightTemple]);
   const jawWidth = distance(landmarks[LANDMARK_IDS.leftJaw], landmarks[LANDMARK_IDS.rightJaw]);
   const foreheadWidth = distance(landmarks[LANDMARK_IDS.leftForehead], landmarks[LANDMARK_IDS.rightForehead]);
+  const cheekboneWidth = distance(landmarks[LANDMARK_IDS.leftCheekbone], landmarks[LANDMARK_IDS.rightCheekbone]);
 
+  // 顎の角度
   const chinAngle = angleBetween(
     landmarks[LANDMARK_IDS.leftJaw],
     landmarks[LANDMARK_IDS.chin],
     landmarks[LANDMARK_IDS.rightJaw]
   );
 
+  // 中顔面 vs 下顔面のバランス（面長判定に重要）
+  const midFace = distance(landmarks[LANDMARK_IDS.browCenter], landmarks[LANDMARK_IDS.noseBase]);
+  const lowerFace = distance(landmarks[LANDMARK_IDS.noseBase], landmarks[LANDMARK_IDS.chin]);
+  const verticalBalance = lowerFace > 0 ? midFace / lowerFace : 1;
+
   return {
     widthRatio: faceWidth / faceLength,
     jawRatio: jawWidth / faceWidth,
     chinAngle,
     foreheadRatio: foreheadWidth / faceWidth,
+    cheekboneRatio: cheekboneWidth / faceWidth,
+    verticalBalance,
     faceLength,
     faceWidth,
     jawWidth,
     foreheadWidth,
+    cheekboneWidth,
   };
+}
+
+/** 顔が正面を向いているか判定（左右対称性チェック） */
+function isFaceFrontal(landmarks: { x: number; y: number; z: number }[]): boolean {
+  const nose = landmarks[LANDMARK_IDS.noseTip];
+  const leftTemple = landmarks[LANDMARK_IDS.leftTemple];
+  const rightTemple = landmarks[LANDMARK_IDS.rightTemple];
+
+  // 鼻先がこめかみの中点からどれだけずれているか
+  const midX = (leftTemple.x + rightTemple.x) / 2;
+  const faceWidth = Math.abs(rightTemple.x - leftTemple.x);
+  const offset = Math.abs(nose.x - midX) / faceWidth;
+
+  // 10%以上ずれていたら横向き
+  return offset < 0.10;
 }
 
 export async function analyzeFace(imageElement: HTMLImageElement | HTMLCanvasElement) {
@@ -120,6 +164,11 @@ export async function analyzeFace(imageElement: HTMLImageElement | HTMLCanvasEle
   }
 
   const landmarks = result.faceLandmarks[0];
+
+  if (!isFaceFrontal(landmarks)) {
+    throw new Error("正面を向いて撮影してください。顔が横を向いています。");
+  }
+
   const measurements = calculateFaceMetrics(landmarks);
 
   return { landmarks, measurements };
