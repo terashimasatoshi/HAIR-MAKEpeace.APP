@@ -11,6 +11,8 @@ interface GoogleReviewBannerProps {
   defaultStore: StoreKey;
   menuNames: string[];
   concerns: string[];
+  stylistName?: string;
+  allStylists?: string[];
 }
 
 const STORE_LABELS: Record<StoreKey, string> = {
@@ -25,8 +27,9 @@ const STORE_FULL_NAMES: Record<StoreKey, string> = {
 
 const MAX_GENERATE_COUNT = 3;
 
-export function GoogleReviewBanner({ reviewUrlTakayanagi, reviewUrlHanado, defaultStore, menuNames, concerns }: GoogleReviewBannerProps) {
+export function GoogleReviewBanner({ reviewUrlTakayanagi, reviewUrlHanado, defaultStore, menuNames, concerns, stylistName, allStylists }: GoogleReviewBannerProps) {
   const [selectedStore, setSelectedStore] = useState<StoreKey>(defaultStore);
+  const [selectedStylist, setSelectedStylist] = useState(stylistName || '');
   const [hitokoto, setHitokoto] = useState('');
   const [generatedReview, setGeneratedReview] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -43,7 +46,7 @@ export function GoogleReviewBanner({ reviewUrlTakayanagi, reviewUrlHanado, defau
       const res = await fetch('/api/generate-review', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ hitokoto, storeName: STORE_FULL_NAMES[selectedStore], menuNames, concerns }),
+        body: JSON.stringify({ hitokoto, storeName: STORE_FULL_NAMES[selectedStore], menuNames, concerns, stylistName: selectedStylist }),
       });
 
       if (!res.ok) {
@@ -70,7 +73,19 @@ export function GoogleReviewBanner({ reviewUrlTakayanagi, reviewUrlHanado, defau
   const handleCopy = async () => {
     if (!generatedReview) return;
     try {
-      await navigator.clipboard.writeText(generatedReview);
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(generatedReview);
+      } else {
+        // Fallback for non-HTTPS (e.g. local dev, HTTP on mobile)
+        const textarea = document.createElement('textarea');
+        textarea.value = generatedReview;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
       setIsCopied(true);
       setTimeout(() => setIsCopied(false), 2000);
     } catch {
@@ -117,6 +132,30 @@ export function GoogleReviewBanner({ reviewUrlTakayanagi, reviewUrlHanado, defau
 
       {/* AI口コミ生成セクション */}
       <div className="bg-white/70 rounded-xl p-4 mb-5 text-left">
+        {/* 担当スタイリスト選択 */}
+        {allStylists && allStylists.length > 0 && (
+          <div className="mb-4">
+            <p className="text-sm font-bold text-[#333] mb-2">
+              担当スタイリスト
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {allStylists.map((name) => (
+                <button
+                  key={name}
+                  onClick={() => setSelectedStylist(name)}
+                  className={`px-4 py-2 rounded-full text-sm font-bold transition-colors ${
+                    selectedStylist === name
+                      ? 'bg-[#4A7C59] text-white shadow-md'
+                      : 'bg-white text-[#555] border border-[#ccc] hover:bg-[#f5f5f5]'
+                  }`}
+                >
+                  {name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <p className="text-sm font-bold text-[#333] mb-2">
           一言で感想を教えてください
         </p>

@@ -6,6 +6,7 @@ interface GenerateReviewRequest {
   storeName: string;
   menuNames: string[];
   concerns: string[];
+  stylistName?: string;
 }
 
 export async function POST(request: Request) {
@@ -41,6 +42,9 @@ ${body.storeName}
 【今日の施術内容】
 ${body.menuNames.length > 0 ? body.menuNames.join('、') : '髪質改善トリートメント'}
 
+【担当スタイリスト】
+${body.stylistName || '指定なし'}
+
 【来店前の悩み】
 ${body.concerns.length > 0 ? body.concerns.join('、') : '特になし'}
 
@@ -49,6 +53,7 @@ ${body.concerns.length > 0 ? body.concerns.join('、') : '特になし'}
 - 一言感想のトーンやテンションに合わせる
 - 150〜250文字程度
 - 施術内容や悩みの解決に自然に触れる
+- 担当スタイリスト名が指定されている場合は、自然な形で名前に触れる（例：「○○さんに担当していただきました」等）。「指定なし」の場合は名前に触れない
 - 嘘や誇張は入れない
 - 「また来たい」「おすすめ」など前向きな締めくくり
 - 絵文字は1〜2個まで（なくてもOK）

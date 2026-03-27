@@ -160,6 +160,8 @@ export default function AiProposalPage() {
                     body: JSON.stringify({
                         gender: data.gender || 'female',
                         age: customer?.age || null,
+                        hairLength: data.hairLength || '',
+                        lengthPreference: data.lengthPreference || '',
                         faceShape: faceShapeLabel,
                         personalColor: effectivePersonalSeason || "spring (default)",
                         personalColorBase: effectivePersonalBase || "warm",

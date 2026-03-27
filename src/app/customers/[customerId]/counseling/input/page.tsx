@@ -210,7 +210,7 @@ export default function CounselingInputPage() {
     };
 
     // ... existing helpers ...
-    const { gender, concerns: selectedConcerns, damageLevel, personalColor, faceShape, request } = data;
+    const { gender, hairLength, lengthPreference, concerns: selectedConcerns, damageLevel, personalColor, faceShape, request } = data;
     const personalColorBase = personalColor?.base || null;
     const personalColorSeason = personalColor?.season || "";
     // Re-declare existing helpers to match file context if needed, but since we modify component body:
@@ -665,6 +665,35 @@ export default function CounselingInputPage() {
                     </div>
                 </div>
 
+                {/* 3.6 Hair Length Selection */}
+                <div className="bg-white rounded-xl shadow-sm p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                        <span className="font-bold">現在の髪の長さ</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                        {([
+                            { id: 'very-short', label: 'ベリーショート' },
+                            { id: 'short', label: 'ショート' },
+                            { id: 'bob', label: 'ボブ' },
+                            { id: 'medium', label: 'ミディアム' },
+                            { id: 'long', label: 'ロング' },
+                        ] as const).map(({ id, label }) => (
+                            <button
+                                key={id}
+                                onClick={() => updateData({ hairLength: id })}
+                                className={cn(
+                                    "px-4 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 border",
+                                    hairLength === id
+                                        ? "bg-primary text-white border-primary shadow-md"
+                                        : "bg-secondary/5 text-foreground border-transparent hover:bg-secondary/10"
+                                )}
+                            >
+                                {label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
                 {/* 4. Concerns */}
                 <Accordion type="single" collapsible defaultValue="concerns" className="w-full">
                     {/* ... Rest of Accordion ... */}
@@ -880,13 +909,42 @@ export default function CounselingInputPage() {
                         <AccordionTrigger className="px-4 py-3 hover:no-underline">
                             <span className="font-bold">本日のご要望</span>
                         </AccordionTrigger>
-                        <AccordionContent className="p-4 pt-0">
-                            <Textarea
-                                placeholder="お客様のご要望を入力してください"
-                                className="min-h-[120px] resize-none"
-                                value={request}
-                                onChange={(e) => setRequest(e.target.value)}
-                            />
+                        <AccordionContent className="p-4 pt-0 space-y-4">
+                            {/* 長さの希望 */}
+                            <div>
+                                <p className="text-sm font-bold text-[#333] mb-2">長さのご希望</p>
+                                <div className="flex flex-wrap gap-2">
+                                    {([
+                                        { id: 'shorter', label: '短くしたい' },
+                                        { id: 'slightly-shorter', label: '少し短く' },
+                                        { id: 'keep', label: '現状維持' },
+                                        { id: 'grow', label: '伸ばしたい' },
+                                    ] as const).map(({ id, label }) => (
+                                        <button
+                                            key={id}
+                                            onClick={() => updateData({ lengthPreference: id })}
+                                            className={cn(
+                                                "px-4 py-2 rounded-full text-sm font-bold transition-all duration-200 border",
+                                                lengthPreference === id
+                                                    ? "bg-primary text-white border-primary shadow-md"
+                                                    : "bg-secondary/5 text-foreground border-transparent hover:bg-secondary/10"
+                                            )}
+                                        >
+                                            {label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            {/* 自由記述 */}
+                            <div>
+                                <p className="text-sm font-bold text-[#333] mb-2">その他のご要望</p>
+                                <Textarea
+                                    placeholder="お客様のご要望を入力してください"
+                                    className="min-h-[120px] resize-none"
+                                    value={request}
+                                    onChange={(e) => setRequest(e.target.value)}
+                                />
+                            </div>
                         </AccordionContent>
                     </AccordionItem>
 

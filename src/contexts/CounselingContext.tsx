@@ -20,8 +20,13 @@ type Customer = {
 
 type Gender = 'female' | 'male' | '';
 
+type HairLength = 'very-short' | 'short' | 'bob' | 'medium' | 'long' | '';
+type LengthPreference = 'shorter' | 'slightly-shorter' | 'keep' | 'grow' | '';
+
 type CounselingData = {
     gender: Gender;
+    hairLength: HairLength;
+    lengthPreference: LengthPreference;
     concerns: string[];
     damageLevel: number;
     faceShape: string;
@@ -46,6 +51,8 @@ const CounselingContext = createContext<CounselingContextType | undefined>(undef
 
 const initialData: CounselingData = {
     gender: '',
+    hairLength: '',
+    lengthPreference: '',
     concerns: [],
     damageLevel: 1,
     faceShape: '',

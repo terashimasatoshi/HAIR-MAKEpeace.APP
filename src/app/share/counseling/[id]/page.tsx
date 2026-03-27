@@ -58,6 +58,14 @@ export default async function ShareCounselingPage({
   const reviewUrlTakayanagi = getReviewUrl('takayanagi');
   const reviewUrlHanado = getReviewUrl('hanado');
 
+  // スタイリスト一覧を取得（口コミ担当選択用）
+  const { data: stylistsData } = await supabase
+    .from('stylists')
+    .select('name')
+    .eq('is_active', true)
+    .order('created_at', { ascending: true });
+  const allStylistNames = stylistsData?.map((s) => s.name) || [];
+
   const hasCardImage = aiSuggestion?.styleSheetImageUrl;
 
   return (
@@ -268,6 +276,8 @@ export default async function ShareCounselingPage({
               defaultStore="takayanagi"
               menuNames={session.selected_menus as string[] || []}
               concerns={concerns || []}
+              stylistName={stylist?.name}
+              allStylists={allStylistNames}
             />
           </div>
         )}
