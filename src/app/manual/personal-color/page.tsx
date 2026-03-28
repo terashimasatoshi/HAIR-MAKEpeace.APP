@@ -1,10 +1,32 @@
+"use client";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Info, CheckCircle2, AlertTriangle, Lightbulb } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Info, CheckCircle2, AlertTriangle, Lightbulb, ChevronLeft, X } from "lucide-react";
 
 export default function PersonalColorManualPage() {
+    const handleClose = () => {
+        if (window.opener || window.history.length <= 1) {
+            window.close();
+        } else {
+            window.history.back();
+        }
+    };
+
     return (
-        <div className="min-h-screen bg-[#FDFBF7] font-sans text-gray-800 p-6 md:p-12">
+        <div className="min-h-screen bg-[#FDFBF7] font-sans text-gray-800">
+            <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-border px-4 py-3 flex items-center justify-between">
+                <Button variant="ghost" size="icon" onClick={handleClose}>
+                    <ChevronLeft className="h-6 w-6" />
+                </Button>
+                <span className="font-bold">パーソナルカラー診断マニュアル</span>
+                <Button variant="ghost" size="icon" onClick={handleClose}>
+                    <X className="h-5 w-5" />
+                </Button>
+            </header>
+
+            <div className="p-6 md:p-12">
             <main className="max-w-3xl mx-auto space-y-8">
 
                 {/* Header */}
@@ -177,6 +199,7 @@ export default function PersonalColorManualPage() {
                 </div>
 
             </main>
+            </div>
         </div>
     );
 }
