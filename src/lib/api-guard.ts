@@ -12,11 +12,16 @@ export function verifyApiSecret(request: Request): NextResponse | null {
   // 開発環境ではスキップ
   if (process.env.NODE_ENV === "development") return null;
 
-  // fail-closed: ホスト設定が存在しなければ即401（設定漏れ事故防止）
-  const vercelUrl = process.env.NEXT_PUBLIC_VERCEL_URL || process.env.VERCEL_URL || "";
-  const customDomain = process.env.NEXT_PUBLIC_APP_DOMAIN || "";
-  if (!vercelUrl && !customDomain) {
-    console.error("[API guard misconfigured] VERCEL_URL and NEXT_PUBLIC_APP_DOMAIN are both unset — blocking all requests");
+  // Vercel システム変数 + カスタムドメインからホワイトリストを構築
+  // VERCEL_URL: デプロイ固有URL (xxx-abc123.vercel.app)
+  // VERCEL_PROJECT_PRODUCTION_URL: プロダクションURL (project.vercel.app)
+  // VERCEL_BRANCH_URL: ブランチURL (project-git-branch.vercel.app)
+  // NEXT_PUBLIC_APP_DOMAIN: カスタムドメイン (手動設定)
+  const allowedHosts = buildAllowedHosts();
+
+  // fail-closed: ホワイトリストが空なら即401（設定漏れ事故防止）
+  if (allowedHosts.size === 0) {
+    console.error("[API guard misconfigured] No allowed hosts configured — blocking all requests");
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -25,16 +30,36 @@ export function verifyApiSecret(request: Request): NextResponse | null {
 
   // origin or referer いずれかがホワイトリストと完全一致すれば許可
   if (origin) {
-    const originHost = safeHostname(origin);
-    if (originHost && isAllowedHost(originHost, vercelUrl)) return null;
+    const host = safeHostname(origin);
+    if (host && allowedHosts.has(host)) return null;
   }
 
   if (referer) {
-    const refererHost = safeHostname(referer);
-    if (refererHost && isAllowedHost(refererHost, vercelUrl)) return null;
+    const host = safeHostname(referer);
+    if (host && allowedHosts.has(host)) return null;
   }
 
   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+}
+
+function buildAllowedHosts(): Set<string> {
+  const hosts = new Set<string>();
+
+  const envVars = [
+    process.env.VERCEL_URL,
+    process.env.VERCEL_PROJECT_PRODUCTION_URL,
+    process.env.VERCEL_BRANCH_URL,
+    process.env.NEXT_PUBLIC_APP_DOMAIN,
+  ];
+
+  for (const val of envVars) {
+    if (!val) continue;
+    // プロトコルがあればパース、なければそのままホスト名として扱う
+    const hostname = val.replace(/^https?:\/\//, "").split("/")[0];
+    if (hostname) hosts.add(hostname);
+  }
+
+  return hosts;
 }
 
 function safeHostname(urlOrOrigin: string): string | null {
@@ -43,22 +68,6 @@ function safeHostname(urlOrOrigin: string): string | null {
   } catch {
     return null;
   }
-}
-
-function isAllowedHost(hostname: string, vercelUrl: string): boolean {
-  // 厳格ホワイトリスト: 完全一致のみ許可
-
-  // VERCEL_URL（そのデプロイ固有のURL）と完全一致
-  if (vercelUrl) {
-    const vercelHostname = vercelUrl.replace(/^https?:\/\//, "").split("/")[0];
-    if (hostname === vercelHostname) return true;
-  }
-
-  // NEXT_PUBLIC_APP_DOMAIN（本番カスタムドメイン）と完全一致
-  const customDomain = process.env.NEXT_PUBLIC_APP_DOMAIN;
-  if (customDomain && hostname === customDomain) return true;
-
-  return false;
 }
 
 /**
