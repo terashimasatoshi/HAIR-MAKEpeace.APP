@@ -51,7 +51,7 @@ export function FaceDiagnosisModal({
   const [validFrames, setValidFrames] = useState(0);
   const [rejectCounts, setRejectCounts] = useState<Record<string, number>>({});
 
-  /** 複数フレーム集約の結果を受け取る */
+  /** 複数フレーム集約の結果を受け取る（画像込み、onCaptureとは独立） */
   const handleAggregatedResult = useCallback((aggResult: {
     faceType: FaceType;
     scores: FaceScores;
@@ -60,7 +60,12 @@ export function FaceDiagnosisModal({
     landmarks: { x: number; y: number; z: number }[];
     validFrames: number;
     rejectCounts: Record<string, number>;
+    imageDataUrl: string;
+    imageSize: { width: number; height: number };
   }) => {
+    // 画像データも同時にセット（onCaptureを経由しない）
+    setImageUrl(aggResult.imageDataUrl);
+    setCapturedSize(aggResult.imageSize);
     setResult({
       faceType: aggResult.faceType,
       scores: aggResult.scores,
@@ -73,16 +78,12 @@ export function FaceDiagnosisModal({
     setPhase("result");
   }, []);
 
-  /** キャプチャ画像を受け取る */
+  /** 単発キャプチャ画像を受け取る（フォールバック: MediaPipeが使えない場合のみ） */
   const handleCapture = useCallback(async (canvas: HTMLCanvasElement) => {
     const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
     setImageUrl(dataUrl);
     setCapturedSize({ width: canvas.width, height: canvas.height });
 
-    // 集約結果がすでにセットされている場合はスキップ（集約モード）
-    if (phase === "result" || result) return;
-
-    // フォールバック: 単発解析（MediaPipeが使えない場合）
     setPhase("analyzing");
     setError(null);
 
@@ -97,7 +98,7 @@ export function FaceDiagnosisModal({
       setError(e instanceof Error ? e.message : "解析に失敗しました");
       setPhase("camera");
     }
-  }, [phase, result]);
+  }, []);
 
   const handleApplyResult = useCallback(() => {
     if (!result) return;

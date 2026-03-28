@@ -35,6 +35,10 @@ interface CameraProps {
     validFrames: number;
     /** フレーム除外理由ごとの回数 */
     rejectCounts: Record<RejectReason, number>;
+    /** キャプチャ画像（データURL） */
+    imageDataUrl: string;
+    /** キャプチャ画像サイズ */
+    imageSize: { width: number; height: number };
   }) => void;
 }
 
@@ -323,7 +327,11 @@ export function Camera({ onCapture, onAggregatedResult }: CameraProps) {
     // 最後のフレームのlandmarksとmeasurementsを代表値として使用
     const lastFrame = frameResults[frameResults.length - 1];
 
+    // 画像データURLを生成
+    const imageDataUrl = canvas.toDataURL("image/jpeg", 0.9);
+
     if (onAggregatedResult) {
+      // 集約モード: 画像を含めて一括で渡す（onCaptureは呼ばない）
       onAggregatedResult({
         faceType: finalType,
         scores: avgScores as FaceScores,
@@ -332,11 +340,13 @@ export function Camera({ onCapture, onAggregatedResult }: CameraProps) {
         landmarks: lastFrame.landmarks,
         validFrames: n,
         rejectCounts,
+        imageDataUrl,
+        imageSize: { width: canvas.width, height: canvas.height },
       });
+    } else {
+      // フォールバック: 単発モード
+      onCapture(canvas);
     }
-
-    // canvasも渡す（画像表示用）
-    onCapture(canvas);
   }, [onCapture, onAggregatedResult]);
 
   /** 単発キャプチャ（フォールバック用） */
