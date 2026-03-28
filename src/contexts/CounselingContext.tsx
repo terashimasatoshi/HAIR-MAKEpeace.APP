@@ -342,6 +342,7 @@ export function CounselingProvider({ children, customerId }: { children: ReactNo
                     selected_menus: data.selectedMenus || [],
                     ai_suggestion: aiSuggestion || null,
                     stylist_id: data.stylistId || null,
+                    status: 'in_progress',
                 })
                 .select()
                 .single();

@@ -56,7 +56,7 @@ export default function Home() {
             customer:customer_id(name),
             stylist:stylist_id(name)
           `)
-          .neq('status', 'completed')
+          .or('status.is.null,status.neq.completed')
           .gte('created_at', `${today}T00:00:00`)
           .order('created_at', { ascending: false });
 
