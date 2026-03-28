@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { ArrowRight, Save } from 'lucide-react';
-import { useCounseling } from '@/context/CounselingContext';
+import { useCounseling } from '@/contexts/CounselingContext';
 import { 
   Header, 
   CustomerInfoCard, 
@@ -21,14 +21,14 @@ export default function CounselingPage() {
   const router = useRouter();
   const params = useParams();
   const sessionId = params.sessionId as string;
-  const { currentCustomer, formData, updateSectionData, setFormData } = useCounseling();
+  const { customer, data: formData, updateSectionData, updateData } = useCounseling();
   const [activeTab, setActiveTab] = useState<'root' | 'middle' | 'ends'>('root');
   const [isSaving, setIsSaving] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
 
   // 顧客が選択されていない場合
-  if (!currentCustomer) {
+  if (!customer) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -140,18 +140,16 @@ export default function CounselingPage() {
     }
   };
 
-  const updateHistory = (field: string, val: any) => {
-    setFormData(prev => ({
-      ...prev,
-      treatmentHistory: { ...prev.treatmentHistory, [field]: val }
-    }));
+  const updateHistory = (field: string, val: string | boolean) => {
+    updateData({
+      treatmentHistory: { ...formData.treatmentHistory, [field]: val }
+    });
   };
 
   const updateAssessment = (field: string, val: string) => {
-    setFormData(prev => ({
-      ...prev,
-      staffAssessment: { ...prev.staffAssessment, [field]: val }
-    }));
+    updateData({
+      staffAssessment: { ...formData.staffAssessment, [field]: val }
+    });
   };
 
   return (
@@ -162,7 +160,7 @@ export default function CounselingPage() {
       />
       
       <main className="p-4 max-w-2xl mx-auto space-y-8">
-        <CustomerInfoCard customer={currentCustomer} />
+        <CustomerInfoCard customer={customer} />
 
         {/* 施術前の状態 */}
         <Section title="施術前の状態" description="部位ごとの状態を入力してください">
@@ -175,7 +173,7 @@ export default function CounselingPage() {
             />
             <div className="h-px bg-border my-6" />
             <CurlSelector 
-              value={formData.hairConditionBefore[activeTab].curl} 
+              value={formData.hairConditionBefore[activeTab].curl as 'straight' | 'light' | 'medium' | 'strong'}
               onChange={(val) => updateSectionData(activeTab, 'curl', val)} 
             />
           </div>

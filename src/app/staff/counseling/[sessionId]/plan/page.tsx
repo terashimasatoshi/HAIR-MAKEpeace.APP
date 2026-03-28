@@ -2,7 +2,7 @@
 
 import { useRouter, useParams } from 'next/navigation';
 import { Clock, AlertTriangle, RefreshCw } from 'lucide-react';
-import { useCounseling } from '@/context/CounselingContext';
+import { useCounseling } from '@/contexts/CounselingContext';
 import { Header } from '@/components/counseling/CounselingComponents';
 import { Button, Card, Section } from '@/components/ui/common';
 
@@ -10,8 +10,9 @@ export default function PlanPage() {
   const router = useRouter();
   const params = useParams();
   const sessionId = params.sessionId as string;
-  const { formData } = useCounseling();
-  const plan = formData.aiPlan;
+  const { data } = useCounseling();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const plan = data.aiPlan as Record<string, any> | null;
 
   if (!plan) {
     return (
@@ -75,7 +76,7 @@ export default function PlanPage() {
         {/* Process */}
         <Section title="施術プロセス">
           <div className="space-y-4">
-            {plan.treatmentProcess.map((step, idx) => (
+            {plan.treatmentProcess.map((step: { step: number; action: string; timeMinutes: number; temperature?: string; notes: string }, idx: number) => (
               <div key={idx} className="flex gap-4">
                 <div className="flex flex-col items-center">
                   <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-bold text-sm">
@@ -127,7 +128,7 @@ export default function PlanPage() {
             <span>注意点・リスク</span>
           </div>
           <ul className="list-disc list-inside space-y-1 text-sm text-text-primary">
-            {plan.risksAndPrecautions.map((risk, i) => (
+            {plan.risksAndPrecautions.map((risk: string, i: number) => (
               <li key={i}>{risk}</li>
             ))}
           </ul>

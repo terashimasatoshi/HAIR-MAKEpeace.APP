@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { useCounseling } from '@/context/CounselingContext';
+import { useCounseling } from '@/contexts/CounselingContext';
 import { fetchApi } from '@/lib/fetch-api';
 import { Header } from '@/components/counseling/CounselingComponents';
 import { Button, Card } from '@/components/ui/common';
@@ -18,7 +18,7 @@ export default function PrescriptionPage() {
   const router = useRouter();
   const params = useParams();
   const sessionId = params.sessionId as string;
-  const { currentCustomer, formData } = useCounseling();
+  const { customer, data: formData } = useCounseling();
   
   const [prescription, setPrescription] = useState<StaffPrescription>(defaultPrescription);
   const [isReviewing, setIsReviewing] = useState(false);
@@ -26,7 +26,7 @@ export default function PrescriptionPage() {
   const [showReview, setShowReview] = useState(false);
 
   // 顧客が選択されていない場合
-  if (!currentCustomer) {
+  if (!customer) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -95,9 +95,9 @@ export default function PrescriptionPage() {
               👤
             </div>
             <div>
-              <h2 className="text-lg font-bold text-text-primary">{currentCustomer.name} 様</h2>
+              <h2 className="text-lg font-bold text-text-primary">{customer.name} 様</h2>
               <p className="text-sm text-text-secondary">
-                前回来店: {currentCustomer.lastVisitDate || '初来店'}
+                前回来店: {(customer as unknown as Record<string, string>).lastVisitDate || '初来店'}
               </p>
             </div>
           </div>

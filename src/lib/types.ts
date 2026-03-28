@@ -3,7 +3,7 @@
 // ==========================================
 
 // 基本型
-export type DamageLevel = 1 | 2 | 3 | 4 | 5;
+export type DamageLevel = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
 export type CurlIntensity = 'straight' | 'light' | 'medium' | 'strong';
 export type ColorHistory = 'none' | '1month' | '3months' | '6months' | '1year_plus';
 export type BleachCount = 'none' | '1' | '2-3' | '4plus';

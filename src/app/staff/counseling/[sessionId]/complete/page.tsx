@@ -3,22 +3,22 @@
 import { useRouter, useParams } from 'next/navigation';
 import { CheckCircle, MessageCircle, Home } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
-import { useCounseling } from '@/context/CounselingContext';
+import { useCounseling } from '@/contexts/CounselingContext';
 import { Button, Card } from '@/components/ui/common';
 
 export default function CompletePage() {
   const router = useRouter();
   const params = useParams();
   const sessionId = params.sessionId as string;
-  const { currentCustomer, resetSession } = useCounseling();
+  const { customer, resetData } = useCounseling();
 
   const handleNewSession = () => {
-    resetSession();
+    resetData();
     router.push('/staff/customers');
   };
 
   const handleBackToHome = () => {
-    resetSession();
+    resetData();
     router.push('/staff');
   };
 
@@ -37,7 +37,7 @@ export default function CompletePage() {
             カウンセリング完了
           </h1>
           <p className="text-text-secondary">
-            {currentCustomer?.name || 'お客様'}様のレポートが作成されました
+            {customer?.name || 'お客様'}様のレポートが作成されました
           </p>
         </div>
 

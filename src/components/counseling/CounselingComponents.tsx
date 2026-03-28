@@ -37,7 +37,7 @@ interface CustomerInfoCardProps {
   customer: {
     name: string;
     lastVisitDate?: string;
-    visitCount: number;
+    visitCount?: number;
   };
   onViewHistory?: () => void;
 }
@@ -53,11 +53,11 @@ export function CustomerInfoCard({ customer, onViewHistory }: CustomerInfoCardPr
           <div>
             <h2 className="text-lg font-bold text-text-primary">{customer.name} 様</h2>
             <p className="text-sm text-text-secondary">
-              前回来店: {customer.lastVisitDate || '初来店'} • {customer.visitCount}回目
+              前回来店: {customer.lastVisitDate || '初来店'} • {customer.visitCount || 0}回目
             </p>
           </div>
         </div>
-        {customer.visitCount > 1 && onViewHistory && (
+        {(customer.visitCount || 0) > 1 && onViewHistory && (
           <button 
             onClick={onViewHistory}
             className="text-primary text-sm font-medium underline underline-offset-2"
@@ -115,63 +115,47 @@ export function SectionTabs({ activeTab, onTabChange, completedTabs = [] }: Sect
 
 // --- Damage Slider ---
 interface DamageLevelSliderProps {
-  value: DamageLevel;
-  onChange: (value: DamageLevel) => void;
+  value: number;
+  onChange: (value: number) => void;
 }
 
-const damageColors: Record<DamageLevel, string> = {
-  1: 'bg-damage-1',
-  2: 'bg-damage-2',
-  3: 'bg-damage-3',
-  4: 'bg-damage-4',
-  5: 'bg-damage-5',
-};
+function getDamageColorClass(level: number): string {
+  if (level <= 2) return 'bg-[#4A7C59]';
+  if (level <= 4) return 'bg-[#E3B23C]';
+  if (level <= 8) return 'bg-[#D87B5A]';
+  return 'bg-[#DC2626]';
+}
 
 export function DamageLevelSlider({ value, onChange }: DamageLevelSliderProps) {
-  const levels: { val: DamageLevel; label: string; color: string }[] = [
-    { val: 1, label: '健康', color: 'bg-damage-1' },
-    { val: 2, label: 'やや健康', color: 'bg-damage-2' },
-    { val: 3, label: '普通', color: 'bg-damage-3' },
-    { val: 4, label: 'ダメージ', color: 'bg-damage-4' },
-    { val: 5, label: 'ハイダメージ', color: 'bg-damage-5' },
-  ];
-
   return (
     <div className="mb-8">
       <div className="flex justify-between items-end mb-4">
         <label className="text-base font-bold text-text-primary">ダメージレベル</label>
-        <span className={cn("text-2xl font-bold px-3 py-1 rounded-lg text-white", damageColors[value])}>
+        <span className={cn("text-2xl font-bold px-3 py-1 rounded-lg text-white", getDamageColorClass(value))}>
           {value}
         </span>
       </div>
-      
-      <div className="relative h-12 flex items-center justify-between px-2">
-        {/* Track */}
-        <div className="absolute left-2 right-2 top-1/2 -translate-y-1/2 h-2 rounded-full bg-gradient-to-r from-damage-1 via-damage-3 to-damage-5 opacity-30 pointer-events-none" />
-        
-        {levels.map((level) => (
+
+      <div className="grid grid-cols-5 gap-1.5">
+        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((level) => (
           <button
-            key={level.val}
-            onClick={() => onChange(level.val)}
-            className="group relative z-10 flex flex-col items-center focus:outline-none touch-target"
-            style={{ width: '44px' }}
+            key={level}
+            onClick={() => onChange(level)}
+            className={cn(
+              "h-10 rounded-lg font-bold transition-all duration-200 flex items-center justify-center text-sm",
+              value === level
+                ? cn("text-white shadow-md scale-105", getDamageColorClass(level))
+                : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+            )}
           >
-            <div 
-              className={cn(
-                "w-6 h-6 rounded-full border-2 transition-all duration-200",
-                value === level.val 
-                  ? `${level.color} border-white shadow-lg scale-125` 
-                  : 'bg-white border-gray-300 group-hover:border-primary'
-              )} 
-            />
-            <span className={cn(
-              "absolute top-8 text-xs whitespace-nowrap font-medium transition-colors",
-              value === level.val ? 'text-text-primary font-bold' : 'text-text-secondary/60'
-            )}>
-              {level.label}
-            </span>
+            {level}
           </button>
         ))}
+      </div>
+      <div className="flex justify-between mt-2 text-xs text-muted-foreground px-1">
+        <span>健康</span>
+        <span>中度</span>
+        <span>危険</span>
       </div>
     </div>
   );

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, Plus, User, ChevronRight, ChevronLeft, Loader2, X, Calendar, FileText, Sparkles } from 'lucide-react';
-import { useCounseling } from '@/context/CounselingContext';
+import { useCounseling } from '@/contexts/CounselingContext';
 import { Button, Card } from '@/components/ui/common';
 import { Customer } from '@/lib/types';
 import { fetchApi } from '@/lib/fetch-api';
@@ -19,7 +19,7 @@ interface PastSession {
 
 export default function CustomerListPage() {
   const router = useRouter();
-  const { setCurrentCustomer } = useCounseling();
+  const { setCustomer } = useCounseling();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -78,7 +78,7 @@ export default function CustomerListPage() {
   const handleStartNewCounseling = async () => {
     if (!selectedCustomer) return;
     try {
-      setCurrentCustomer(selectedCustomer);
+      setCustomer(selectedCustomer);
       const res = await fetchApi('/api/sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -108,7 +108,7 @@ export default function CustomerListPage() {
       });
       if (!res.ok) throw new Error('顧客作成に失敗しました');
       const newCustomer = await res.json();
-      setCurrentCustomer(newCustomer);
+      setCustomer(newCustomer);
       const sessionRes = await fetchApi('/api/sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

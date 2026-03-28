@@ -23,6 +23,31 @@ type Gender = 'female' | 'male' | '';
 type HairLength = 'very-short' | 'short' | 'bob' | 'medium' | 'long' | '';
 type LengthPreference = 'shorter' | 'slightly-shorter' | 'keep' | 'grow' | '';
 
+type HairSectionCondition = {
+    damage: number;
+    curl: string;
+};
+
+type HairConditionBefore = {
+    root: HairSectionCondition;
+    middle: HairSectionCondition;
+    ends: HairSectionCondition;
+};
+
+type TreatmentHistory = {
+    lastColor: string;
+    bleachCount: string;
+    hasStraitening: boolean;
+    bleachLastDate?: string;
+    straighteningLastDate?: string;
+};
+
+type StaffAssessment = {
+    assessmentNotes: string;
+    concerns: string;
+    customerRequests: string;
+};
+
 type CounselingData = {
     gender: Gender;
     hairLength: HairLength;
@@ -34,16 +59,23 @@ type CounselingData = {
     selectedMenus: string[];
     request: string;
     stylistId: string | null;
+    // Staff系フィールド（髪質改善カウンセリング用）
+    hairConditionBefore: HairConditionBefore;
+    treatmentHistory: TreatmentHistory;
+    staffAssessment: StaffAssessment;
+    aiPlan: Record<string, unknown> | null;
 };
 
 type CounselingContextType = {
     customer: Customer | null;
+    setCustomer: (customer: Customer | null) => void;
     stylist: { id: string; name: string } | null;
     data: CounselingData;
     isLoadingCustomer: boolean;
     updateData: (updates: Partial<CounselingData>) => void;
+    updateSectionData: (section: 'root' | 'middle' | 'ends', field: string, value: string | number) => void;
     saveToSupabase: (customerId: string, aiSuggestion?: object) => Promise<{ visitId: string | null; sessionId: string | null }>;
-    saveTreatment: (custId: string, treatmentData: any) => Promise<boolean>;
+    saveTreatment: (custId: string, treatmentData: { selectedProducts: string[]; finishDamageLevel: number; notes: string }) => Promise<boolean>;
     resetData: () => void;
 };
 
@@ -60,6 +92,22 @@ const initialData: CounselingData = {
     selectedMenus: [],
     request: '',
     stylistId: null,
+    hairConditionBefore: {
+        root: { damage: 3, curl: 'straight' },
+        middle: { damage: 3, curl: 'straight' },
+        ends: { damage: 3, curl: 'straight' },
+    },
+    treatmentHistory: {
+        lastColor: 'none',
+        bleachCount: 'none',
+        hasStraitening: false,
+    },
+    staffAssessment: {
+        assessmentNotes: '',
+        concerns: '',
+        customerRequests: '',
+    },
+    aiPlan: null,
 };
 
 export function CounselingProvider({ children, customerId }: { children: ReactNode; customerId?: string }) {
@@ -138,8 +186,22 @@ export function CounselingProvider({ children, customerId }: { children: ReactNo
         setData(prev => ({ ...prev, ...updates }));
     };
 
+    const updateSectionData = (section: 'root' | 'middle' | 'ends', field: string, value: string | number) => {
+        setData(prev => ({
+            ...prev,
+            hairConditionBefore: {
+                ...prev.hairConditionBefore,
+                [section]: {
+                    ...prev.hairConditionBefore[section],
+                    [field]: value,
+                },
+            },
+        }));
+    };
+
     const resetData = () => {
         setData(initialData);
+        setCustomer(null);
     };
 
     const [visitId, setVisitId] = useState<string | null>(null);
@@ -334,7 +396,7 @@ export function CounselingProvider({ children, customerId }: { children: ReactNo
     };
 
     return (
-        <CounselingContext.Provider value={{ customer, stylist, data, isLoadingCustomer, updateData, saveToSupabase, saveTreatment, resetData }}>
+        <CounselingContext.Provider value={{ customer, setCustomer, stylist, data, isLoadingCustomer, updateData, updateSectionData, saveToSupabase, saveTreatment, resetData }}>
             {children}
         </CounselingContext.Provider>
     );

@@ -1,4 +1,4 @@
-import { CounselingProvider } from '@/context/CounselingContext';
+import { CounselingProvider } from '@/contexts/CounselingContext';
 
 export default function StaffLayout({
   children,

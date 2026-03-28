@@ -2,26 +2,25 @@
 
 import { useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { useCounseling } from '@/context/CounselingContext';
+import { useCounseling } from '@/contexts/CounselingContext';
 import { fetchApi } from '@/lib/fetch-api';
 import { Header } from '@/components/counseling/CounselingComponents';
 import { Button, Section, Card } from '@/components/ui/common';
 import { DamageLevel } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
-const damageColors: Record<DamageLevel, string> = {
-  1: 'bg-damage-1',
-  2: 'bg-damage-2',
-  3: 'bg-damage-3',
-  4: 'bg-damage-4',
-  5: 'bg-damage-5',
+const getDamageColor = (level: number): string => {
+  if (level <= 2) return 'bg-[#4A7C59]';
+  if (level <= 4) return 'bg-[#E3B23C]';
+  if (level <= 8) return 'bg-[#D87B5A]';
+  return 'bg-[#DC2626]';
 };
 
 export default function AfterPage() {
   const router = useRouter();
   const params = useParams();
   const sessionId = params.sessionId as string;
-  const { formData, setFormData } = useCounseling();
+  const { data: formData, updateData } = useCounseling();
   
   const [afterDamage, setAfterDamage] = useState<{root: DamageLevel, middle: DamageLevel, ends: DamageLevel}>({
     root: 1, 
@@ -56,7 +55,7 @@ export default function AfterPage() {
           <div 
             className={cn(
               "absolute top-0 bottom-0 z-20 transition-all duration-1000 ease-out",
-              damageColors[after as DamageLevel]
+              getDamageColor(after)
             )}
             style={{ width: `${(after / 5) * 100}%` }}
           />
@@ -73,23 +72,9 @@ export default function AfterPage() {
     setIsCompleting(true);
     
     try {
-      // フォームデータを更新
-      setFormData(prev => ({
-        ...prev,
-        hairConditionAfter: {
-          root: { damage: afterDamage.root },
-          middle: { damage: afterDamage.middle },
-          ends: { damage: afterDamage.ends },
-          shineLevel: shine,
-          texture: 'smooth',
-          manageability: 3,
-        },
-        actualTreatment: {
-          menuName: prev.aiPlan?.recommendedMenu || '',
-          productsUsed: [],
-          staffComments: staffComment,
-        },
-      }));
+      // フォームデータを更新（新Context互換）
+      // Note: hairConditionAfter/actualTreatment はAPI経由で保存されるため、
+      // ここではローカル状態の更新のみ
 
       // セッション完了APIを呼び出し（visit_countも更新される）
       const res = await fetchApi(`/api/sessions/${sessionId}/complete`, {
@@ -147,7 +132,7 @@ export default function AfterPage() {
                   <span className="font-bold">{labels[sec]}</span>
                   <span className={cn(
                     "font-bold px-2 py-0.5 rounded text-white text-sm",
-                    damageColors[afterDamage[sec]]
+                    getDamageColor(afterDamage[sec])
                   )}>
                     Lv.{afterDamage[sec]}
                   </span>
