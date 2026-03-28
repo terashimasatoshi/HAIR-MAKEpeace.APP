@@ -19,7 +19,6 @@ export async function POST(
     const body = await request.json();
     const { staffPrescription } = body;
 
-    console.log('Reviewing staff prescription for session:', sessionId);
 
     const { data: hairCondition } = await supabase
       .from('hair_conditions')
@@ -28,7 +27,6 @@ export async function POST(
       .eq('timing', 'before')
       .single();
 
-    console.log('Calling Claude API for review...');
     
     const systemPrompt = `あなたはMETEO髪質改善の専門家です。スタッフが選んだ薬剤処方をレビューしてください。
 
@@ -64,13 +62,11 @@ ${JSON.stringify(staffPrescription, null, 2)}
     });
 
     const aiText = response.content[0].type === 'text' ? response.content[0].text : '';
-    console.log('Claude review response length:', aiText.length);
 
     let review;
     try {
       const jsonMatch = aiText.match(/\{[\s\S]*\}/);
       review = jsonMatch ? JSON.parse(jsonMatch[0]) : { overall: 'ok', sections: {}, suggestions: [] };
-      console.log('Successfully parsed AI review');
     } catch (e) {
       console.error('Failed to parse AI response:', e);
       review = { overall: 'ok', sections: {}, suggestions: [], warnings: [] };

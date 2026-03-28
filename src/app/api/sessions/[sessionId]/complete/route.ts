@@ -12,7 +12,6 @@ export async function POST(
     const supabase = createServiceSupabaseClient();
     const { sessionId } = await params;
 
-    console.log('Completing session:', sessionId);
 
     const { data: session, error: sessionError } = await supabase
       .from('counseling_sessions')
@@ -29,7 +28,6 @@ export async function POST(
       return NextResponse.json({ error: sessionError.message }, { status: 500 });
     }
 
-    console.log('Session completed, customer_id:', session.customer_id);
 
     return NextResponse.json({ 
       success: true,

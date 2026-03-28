@@ -29,7 +29,6 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    console.log('Fetched customers:', data);
 
     // フロントエンド用に変換
     const customers = (data || []).map((row: any) => ({

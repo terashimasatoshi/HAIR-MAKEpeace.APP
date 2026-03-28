@@ -14,8 +14,6 @@ export async function POST(
     const supabase = createServiceSupabaseClient();
     const body = await request.json();
     
-    console.log('Saving staff assessment for session:', sessionId);
-    console.log('Data:', body);
     
     const { data, error } = await supabase
       .from('counseling_sessions')
@@ -36,7 +34,6 @@ export async function POST(
       throw error;
     }
 
-    console.log('Staff assessment saved:', data.staff_assessment);
 
     return NextResponse.json({ success: true, data: data.staff_assessment });
   } catch (err) {

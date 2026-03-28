@@ -1,3 +1,8 @@
+/**
+ * @deprecated staff系ページ専用の旧Context。
+ * 新規ページは src/contexts/CounselingContext.tsx を使用してください。
+ * TODO: staff系ページを新Contextに移行後、このファイルを削除する。
+ */
 "use client";
 
 import React, { createContext, useContext, useState, ReactNode } from 'react';

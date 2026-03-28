@@ -14,8 +14,6 @@ export async function POST(
     const supabase = createServiceSupabaseClient();
     const body = await request.json();
     
-    console.log('Saving hair condition for session:', sessionId);
-    console.log('Data:', body);
     
     // 既存のレコードがあるか確認
     const { data: existing } = await supabase
@@ -82,7 +80,6 @@ export async function POST(
       result = data;
     }
 
-    console.log('Hair condition saved:', result);
 
     return NextResponse.json({ success: true, data: result });
   } catch (err) {

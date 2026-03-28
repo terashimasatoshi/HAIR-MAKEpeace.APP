@@ -19,7 +19,6 @@ export async function POST(
     const { sessionId } = await params;
     const supabase = createServiceSupabaseClient();
 
-    console.log('Generating AI plan for session:', sessionId);
 
     // 1. セッション情報を取得
     const { data: session, error: sessionError } = await supabase
@@ -56,7 +55,6 @@ export async function POST(
       ? knowledgeData.map(k => `## ${k.title}\n\n${k.content}`).join('\n\n---\n\n')
       : '（ナレッジデータ取得エラー）';
 
-    console.log(`Loaded ${knowledgeData?.length || 0} knowledge entries`);
 
     // 4. プロンプトを構築
     const customerInfo = session.customers ? `顧客名: ${session.customers.name}` : '';
@@ -186,7 +184,6 @@ ${staffAssessmentText}
 \`\`\`
 `;
 
-    console.log('Calling Claude API...');
 
     // 5. Claude APIを呼び出し
     const message = await anthropic.messages.create({
@@ -199,7 +196,6 @@ ${staffAssessmentText}
 
     // 6. レスポンスからJSONを安全にパース
     const responseText = message.content[0].type === 'text' ? message.content[0].text : '';
-    console.log('Claude response length:', responseText.length);
 
     let plan;
     try {
@@ -219,7 +215,6 @@ ${staffAssessmentText}
       }
 
       plan = JSON.parse(jsonStr.trim());
-      console.log('Successfully parsed AI plan');
     } catch (parseError) {
       console.error('JSON Parse Error:', parseError);
       console.error('Raw response (first 800 chars):', responseText.substring(0, 800));

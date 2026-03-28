@@ -10,18 +10,23 @@ export async function POST(request: Request) {
     const supabase = createServiceSupabaseClient();
     const body = await request.json();
     
-    console.log('Creating session for customer:', body.customerId);
-    
-    const defaultStoreId = process.env.DEFAULT_STORE_ID || '';
-    const defaultStaffId = process.env.DEFAULT_STAFF_ID || '';
-    
+    const storeId = body.storeId || process.env.DEFAULT_STORE_ID;
+    const staffId = body.staffId || process.env.DEFAULT_STAFF_ID;
+
+    if (!body.customerId || !storeId || !staffId) {
+      return NextResponse.json(
+        { error: 'customerId, storeId, staffId は必須です' },
+        { status: 400 }
+      );
+    }
+
     // 1. セッションを作成
     const { data, error } = await supabase
       .from('counseling_sessions')
       .insert({
         customer_id: body.customerId,
-        stylist_id: body.staffId || defaultStaffId,
-        store_id: body.storeId || defaultStoreId,
+        stylist_id: staffId,
+        store_id: storeId,
         session_date: new Date().toISOString().split('T')[0],
       })
       .select()
@@ -32,7 +37,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    console.log('Session created:', data);
 
     return NextResponse.json({
       id: data.id,

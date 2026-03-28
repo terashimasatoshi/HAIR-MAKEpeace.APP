@@ -12,7 +12,6 @@ export async function GET(
     const supabase = createServiceSupabaseClient();
     const { customerId } = await params;
     
-    console.log('Fetching sessions for customer:', customerId);
 
     const { data, error } = await supabase
       .from('counseling_sessions')
@@ -36,14 +35,12 @@ export async function GET(
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    console.log('Found sessions:', data?.length);
 
     const sessions = (data || []).map((row: any) => {
       let summary = '記録あり';
       try {
         summary = summarizeAssessment(row.staff_assessment);
       } catch (e) {
-        console.log('Summary error for session:', row.id, e);
       }
       
       return {
