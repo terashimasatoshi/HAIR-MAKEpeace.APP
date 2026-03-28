@@ -434,9 +434,54 @@ export default function AiProposalPage() {
 
             {/* 6. Action Buttons */}
             <div className="fixed bottom-0 w-full p-4 pb-safe-lg bg-white border-t border-border z-20 flex gap-3">
-                <Button variant="outline" className="flex-1 h-12 border-primary text-primary hover:bg-primary/5">
-                    <Share2 className="mr-2 h-4 w-4" />
-                    保存
+                <Button
+                    variant="outline"
+                    className="flex-1 h-12 border-primary text-primary hover:bg-primary/5"
+                    disabled={isSaving}
+                    onClick={async () => {
+                        setIsSaving(true);
+                        try {
+                            let aiSuggestionWithImage = { ...proposal };
+                            if (styleSheetBase64) {
+                                try {
+                                    const ext = styleSheetBase64.mimeType === 'image/png' ? 'png' : 'jpg';
+                                    const filePath = `ai-style-sheets/${customerId}/${Date.now()}.${ext}`;
+                                    const byteString = atob(styleSheetBase64.data);
+                                    const ab = new ArrayBuffer(byteString.length);
+                                    const ia = new Uint8Array(ab);
+                                    for (let i = 0; i < byteString.length; i++) {
+                                        ia[i] = byteString.charCodeAt(i);
+                                    }
+                                    const blob = new Blob([ab], { type: styleSheetBase64.mimeType });
+                                    const { error: uploadError } = await supabase.storage
+                                        .from('treatment-photos')
+                                        .upload(filePath, blob, { contentType: styleSheetBase64.mimeType });
+                                    if (!uploadError) {
+                                        const { data: urlData } = supabase.storage
+                                            .from('treatment-photos')
+                                            .getPublicUrl(filePath);
+                                        aiSuggestionWithImage.styleSheetImageUrl = urlData.publicUrl;
+                                    }
+                                } catch (e) {
+                                    console.error('Style sheet upload failed:', e);
+                                }
+                            }
+                            await saveToSupabase(customerId, aiSuggestionWithImage);
+                            alert('一時保存しました');
+                        } catch (err) {
+                            console.error('Save error:', err);
+                            alert('保存に失敗しました');
+                        } finally {
+                            setIsSaving(false);
+                        }
+                    }}
+                >
+                    {isSaving ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                        <Share2 className="mr-2 h-4 w-4" />
+                    )}
+                    一時保存
                 </Button>
                 <Button
                     className="flex-[2] h-12 bg-primary hover:bg-primary/90 text-white shadow-lg"
