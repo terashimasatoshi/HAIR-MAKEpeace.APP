@@ -12,9 +12,8 @@ export async function POST(request: Request) {
     
     console.log('Creating session for customer:', body.customerId);
     
-    // 実際のstore_idとstylist_idを使用（花堂店、寺嶋聡史）
-    const defaultStoreId = 'd7f4bd2c-69a2-4caf-a717-4a70615b47e6';
-    const defaultStaffId = '3a71d761-c4da-4eef-b938-a383a576ec13';
+    const defaultStoreId = process.env.DEFAULT_STORE_ID || '';
+    const defaultStaffId = process.env.DEFAULT_STAFF_ID || '';
     
     // 1. セッションを作成
     const { data, error } = await supabase

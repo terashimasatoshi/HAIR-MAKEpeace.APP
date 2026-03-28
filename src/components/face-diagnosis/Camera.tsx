@@ -15,8 +15,8 @@ const AGGREGATE_FRAMES = 12;
 const FRAME_INTERVAL = 150;
 /** 明るさ閾値: 顔領域の平均輝度(0-255)がこれ未満→暗すぎ */
 const MIN_BRIGHTNESS = 55;
-/** 顔サイズ閾値: 顔幅がフレーム幅に対してこの比率未満→顔が小さすぎ */
-const MIN_FACE_AREA_RATIO = 0.12;
+/** 顔サイズ閾値: 顔幅(正規化0〜1)がこの値未満→顔が小さすぎ */
+const MIN_FACE_WIDTH_RATIO = 0.12;
 /** 正面向き閾値: 鼻先が顔幅中点から何%ずれたら横向き判定 */
 const MAX_POSE_OFFSET = 0.10;
 
@@ -217,7 +217,7 @@ export function Camera({ onCapture, onAggregatedResult }: CameraProps) {
         }
 
         // 品質ゲート2: 顔サイズチェック（顔幅がフレーム幅に対して十分か）
-        if (fw < MIN_FACE_AREA_RATIO) {
+        if (fw < MIN_FACE_WIDTH_RATIO) {
           rejectCounts.small_face++;
           continue;
         }

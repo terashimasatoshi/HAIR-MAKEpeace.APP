@@ -27,11 +27,19 @@ export const supabase: SupabaseClient = new Proxy({} as SupabaseClient, {
 });
 
 // サーバー側で使用するService Roleキーのクライアント（API Route専用）
+export class SupabaseConfigError extends Error {
+  constructor() {
+    super('Database configuration error');
+    this.name = 'SupabaseConfigError';
+  }
+}
+
 export function createServiceSupabaseClient(): SupabaseClient {
   const url = getSupabaseUrl();
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !serviceKey) {
-    throw new Error('Supabase URL and Service Role Key must be set in environment variables');
+    console.error('FATAL: NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is not set');
+    throw new SupabaseConfigError();
   }
   return createClient(url, serviceKey);
 }
