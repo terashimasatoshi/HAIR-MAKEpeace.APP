@@ -52,6 +52,7 @@ export default function Home() {
             customer_id,
             selected_menus,
             created_at,
+            status,
             ai_suggestion,
             customer:customer_id(name),
             stylist:stylist_id(name)
@@ -59,6 +60,8 @@ export default function Home() {
           .or('status.is.null,status.neq.completed')
           .gte('created_at', `${today}T00:00:00`)
           .order('created_at', { ascending: false });
+
+        console.log('[Home] Pending sessions query result:', { count: data?.length, error, raw: data });
 
         if (error) {
           console.error('Pending sessions error:', error);

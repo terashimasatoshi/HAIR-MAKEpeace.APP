@@ -323,7 +323,7 @@ export function CounselingProvider({ children, customerId }: { children: ReactNo
             if (visitError || !visit) {
                 console.error('Visit insert error:', visitError);
                 if (ENABLE_LOCAL_FALLBACK) updateLocalCustomerDiagnosis(custId);
-                return { visitId: null, sessionId: null };
+                throw new Error(`Visit insert failed: ${visitError?.message || 'unknown'}`);
             }
 
             // 1. Create Counseling Session
@@ -350,7 +350,7 @@ export function CounselingProvider({ children, customerId }: { children: ReactNo
             if (sessionError) {
                 console.error('Session insert error:', sessionError);
                 if (ENABLE_LOCAL_FALLBACK) updateLocalCustomerDiagnosis(custId);
-                return { visitId: null, sessionId: null };
+                throw new Error(`Session insert failed: ${sessionError.message}`);
             }
 
             setVisitId(visit.id);
