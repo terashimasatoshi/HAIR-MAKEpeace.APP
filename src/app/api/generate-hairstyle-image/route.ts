@@ -90,7 +90,7 @@ export async function POST(request: Request) {
 
 function buildPrompt(data: GenerateImageRequest): string {
   const stylesText = data.styles
-    .slice(0, 2)
+    .slice(0, 3)
     .map((s, i) => `${i + 1}. ${s.title}`)
     .join('\n');
 
@@ -150,6 +150,7 @@ ${colorsText}
 
 ### ③ スタイル提案エリア（メイン・最も大きく 55%）
 - 中央に1つ目のスタイル「${data.styles[0]?.title}」を大きくメインイラストで描く
+- 左右または下に2つ目「${data.styles[1]?.title || ''}」・3つ目「${data.styles[2]?.title || ''}」をやや小さめに描く
 - 髪のツヤ感・質感・カラーがしっかり伝わるように
 - 顔は正面〜やや斜めで描き、髪型のシルエットが分かるようにする
 - 顔型「${data.faceShape}」に合わせた顔の形
