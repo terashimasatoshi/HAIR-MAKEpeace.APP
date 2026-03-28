@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,27 @@ export default function NewCustomerPage() {
     const [phone, setPhone] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [kanaEdited, setKanaEdited] = useState(false);
+    const composingRef = useRef('');
+
+    // ひらがな → カタカナ変換
+    const toKatakana = (str: string) =>
+        str.replace(/[\u3041-\u3096]/g, (ch) =>
+            String.fromCharCode(ch.charCodeAt(0) + 0x60)
+        );
+
+    // IMEの変換前テキスト（ひらがな）を収集
+    const handleCompositionUpdate = useCallback((e: React.CompositionEvent<HTMLInputElement>) => {
+        composingRef.current = e.data || '';
+    }, []);
+
+    // IME確定時にカナフィールドへ反映
+    const handleCompositionEnd = useCallback(() => {
+        if (!kanaEdited && composingRef.current) {
+            setKana(prev => prev + toKatakana(composingRef.current));
+        }
+        composingRef.current = '';
+    }, [kanaEdited]);
 
     const saveLocalCustomer = () => {
         const localId = `local-${Date.now()}`;
@@ -48,6 +69,7 @@ export default function NewCustomerPage() {
                 .from('customers')
                 .insert({
                     name: name.trim(),
+                    kana: kana.trim() || null,
                     age: age ? parseInt(age, 10) : null,
                     phone: phone.trim() || null,
                 })
@@ -103,7 +125,15 @@ export default function NewCustomerPage() {
                             id="name"
                             placeholder="山田 花子"
                             value={name}
-                            onChange={(e) => setName(e.target.value)}
+                            onChange={(e) => {
+                                setName(e.target.value);
+                                // 名前を全消しした場合、カナもリセット
+                                if (!e.target.value.trim() && !kanaEdited) {
+                                    setKana('');
+                                }
+                            }}
+                            onCompositionUpdate={handleCompositionUpdate}
+                            onCompositionEnd={handleCompositionEnd}
                         />
                     </div>
 
@@ -113,8 +143,14 @@ export default function NewCustomerPage() {
                             id="kana"
                             placeholder="ヤマダ ハナコ"
                             value={kana}
-                            onChange={(e) => setKana(e.target.value)}
+                            onChange={(e) => {
+                                setKana(e.target.value);
+                                setKanaEdited(true);
+                            }}
                         />
+                        {!kanaEdited && kana && (
+                            <p className="text-xs text-muted-foreground mt-1">名前入力から自動変換されました</p>
+                        )}
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
