@@ -9,7 +9,10 @@ interface FaceGuideOverlayProps {
 export function FaceGuideOverlay({ faceDetected }: FaceGuideOverlayProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const faceDetectedRef = useRef(faceDetected);
-  faceDetectedRef.current = faceDetected;
+
+  useEffect(() => {
+    faceDetectedRef.current = faceDetected;
+  }, [faceDetected]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
