@@ -79,7 +79,7 @@ ${body.concerns.length > 0 ? body.concerns.join('、') : '特になし'}
     }
 
     return NextResponse.json({ review: textContent.text.trim() });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Generate review error:', error);
     return NextResponse.json(
       { error: '口コミ文の生成に失敗しました。もう一度お試しください。' },

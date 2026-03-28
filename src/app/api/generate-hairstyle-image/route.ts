@@ -79,10 +79,10 @@ export async function POST(request: Request) {
       { error: '画像データが含まれていませんでした' },
       { status: 500 }
     );
-  } catch (error: any) {
+  } catch (error) {
     console.error('Generate hairstyle image error:', error);
     return NextResponse.json(
-      { error: error.message || '画像生成に失敗しました' },
+      { error: '画像生成に失敗しました。もう一度お試しください。' },
       { status: 500 }
     );
   }

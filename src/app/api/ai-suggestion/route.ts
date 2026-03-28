@@ -147,19 +147,10 @@ Return ONLY the JSON. Do not include markdown code block markers.
       });
     }
 
-  } catch (error: any) {
+  } catch (error) {
     console.error("AI Suggestion Error:", error);
-    // Return a graceful fallback if AI fails
     return NextResponse.json({
-      summary: {
-        faceShape: "診断エラー",
-        personalColor: "不明",
-        matchRate: 0
-      },
-      colors: [],
-      styles: [],
-      advice: ["申し訳ありません。AIサービスの接続に失敗しました。", "時間をおいて再度お試しください。"],
-      aiAnalysis: `エラー詳細: ${error.message || "Unknown Error"}`
-    }, { status: 200 }); // Return 200 with error info to prevent client crash
+      error: "AIサービスの接続に失敗しました。時間をおいて再度お試しください。"
+    }, { status: 500 });
   }
 }
