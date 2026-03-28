@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server';
 import { createServiceSupabaseClient } from '@/lib/supabase';
+import { verifyApiSecret } from '@/lib/api-guard';
 
 // 顧客一覧取得
 export async function GET(request: Request) {
+  const authError = verifyApiSecret(request);
+  if (authError) return authError;
   try {
     const supabase = createServiceSupabaseClient();
     const { searchParams } = new URL(request.url);
@@ -44,6 +47,8 @@ export async function GET(request: Request) {
 
 // 新規顧客作成
 export async function POST(request: Request) {
+  const authError = verifyApiSecret(request);
+  if (authError) return authError;
   try {
     const supabase = createServiceSupabaseClient();
     const body = await request.json();

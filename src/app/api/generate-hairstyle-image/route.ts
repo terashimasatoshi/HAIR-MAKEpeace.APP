@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextResponse } from 'next/server';
+import { verifyApiSecret, checkRateLimit } from '@/lib/api-guard';
 
 interface StyleItem {
   title: string;
@@ -28,6 +29,10 @@ interface GenerateImageRequest {
 }
 
 export async function POST(request: Request) {
+  const authError = verifyApiSecret(request);
+  if (authError) return authError;
+  const rateLimitError = checkRateLimit(request);
+  if (rateLimitError) return rateLimitError;
   try {
     const body: GenerateImageRequest = await request.json();
 

@@ -6,6 +6,7 @@ import { Search, Plus, User, ChevronRight, ChevronLeft, Loader2, X, Calendar, Fi
 import { useCounseling } from '@/context/CounselingContext';
 import { Button, Card } from '@/components/ui/common';
 import { Customer } from '@/lib/types';
+import { fetchApi } from '@/lib/fetch-api';
 
 interface PastSession {
   id: string;
@@ -39,7 +40,7 @@ export default function CustomerListPage() {
       setLoading(true);
       const params = new URLSearchParams();
       if (search) params.set('search', search);
-      const res = await fetch(`/api/customers?${params}`);
+      const res = await fetchApi(`/api/customers?${params}`);
       if (!res.ok) throw new Error('取得に失敗しました');
       setCustomers(await res.json());
     } catch (error) {
@@ -62,7 +63,7 @@ export default function CustomerListPage() {
     if (customer.visitCount > 0) {
       try {
         setLoadingSessions(true);
-        const res = await fetch(`/api/customers/${customer.id}/sessions`);
+        const res = await fetchApi(`/api/customers/${customer.id}/sessions`);
         if (res.ok) setPastSessions(await res.json());
       } catch (error) {
         console.error('セッション取得エラー:', error);
@@ -78,7 +79,7 @@ export default function CustomerListPage() {
     if (!selectedCustomer) return;
     try {
       setCurrentCustomer(selectedCustomer);
-      const res = await fetch('/api/sessions', {
+      const res = await fetchApi('/api/sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ customerId: selectedCustomer.id }),
@@ -100,7 +101,7 @@ export default function CustomerListPage() {
     if (!newCustomerName.trim()) { alert('お名前を入力してください'); return; }
     try {
       setCreating(true);
-      const res = await fetch('/api/customers', {
+      const res = await fetchApi('/api/customers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: newCustomerName, phone: newCustomerPhone || null }),
@@ -108,7 +109,7 @@ export default function CustomerListPage() {
       if (!res.ok) throw new Error('顧客作成に失敗しました');
       const newCustomer = await res.json();
       setCurrentCustomer(newCustomer);
-      const sessionRes = await fetch('/api/sessions', {
+      const sessionRes = await fetchApi('/api/sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ customerId: newCustomer.id }),

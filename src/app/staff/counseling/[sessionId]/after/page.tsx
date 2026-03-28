@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useCounseling } from '@/context/CounselingContext';
+import { fetchApi } from '@/lib/fetch-api';
 import { Header } from '@/components/counseling/CounselingComponents';
 import { Button, Section, Card } from '@/components/ui/common';
 import { DamageLevel } from '@/lib/types';
@@ -91,7 +92,7 @@ export default function AfterPage() {
       }));
 
       // セッション完了APIを呼び出し（visit_countも更新される）
-      const res = await fetch(`/api/sessions/${sessionId}/complete`, {
+      const res = await fetchApi(`/api/sessions/${sessionId}/complete`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });

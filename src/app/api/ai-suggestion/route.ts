@@ -1,8 +1,13 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { NextResponse } from 'next/server';
 import { MATCHING_KNOWLEDGE } from '@/lib/knowledge';
+import { verifyApiSecret, checkRateLimit } from '@/lib/api-guard';
 
 export async function POST(request: Request) {
+  const authError = verifyApiSecret(request);
+  if (authError) return authError;
+  const rateLimitError = checkRateLimit(request);
+  if (rateLimitError) return rateLimitError;
   try {
     const { gender, age, hairLength, lengthPreference, faceShape, personalColor, personalColorBase, concerns, request: customerRequest } = await request.json();
     const genderLabel = gender === 'male' ? '男性' : '女性';

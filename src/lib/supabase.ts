@@ -1,13 +1,37 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://qzwbyphqaspxrcgajkts.supabase.co';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6d2J5cGhxYXNweHJjZ2Fqa3RzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAxOTA3NTAsImV4cCI6MjA4NTc2Njc1MH0.ZqCq0xvIn8rgoZAFJFUnup_xHvhDOqyy4v_wiYHZuZw';
+function getSupabaseUrl(): string {
+  return process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+}
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+function getSupabaseAnonKey(): string {
+  return process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+}
 
-export function createServiceSupabaseClient() {
-  return createClient(
-    supabaseUrl,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+// クライアント側で使用する匿名キーのSupabaseクライアント
+let _supabase: SupabaseClient | null = null;
+
+export const supabase: SupabaseClient = new Proxy({} as SupabaseClient, {
+  get(_target, prop) {
+    if (!_supabase) {
+      const url = getSupabaseUrl();
+      const key = getSupabaseAnonKey();
+      if (url && key) {
+        _supabase = createClient(url, key);
+      } else {
+        throw new Error('Supabase URL and Anon Key must be set in environment variables');
+      }
+    }
+    return (_supabase as unknown as Record<string, unknown>)[prop as string];
+  }
+});
+
+// サーバー側で使用するService Roleキーのクライアント（API Route専用）
+export function createServiceSupabaseClient(): SupabaseClient {
+  const url = getSupabaseUrl();
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !serviceKey) {
+    throw new Error('Supabase URL and Service Role Key must be set in environment variables');
+  }
+  return createClient(url, serviceKey);
 }

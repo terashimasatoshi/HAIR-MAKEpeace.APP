@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useCounseling } from '@/context/CounselingContext';
+import { fetchApi } from '@/lib/fetch-api';
 import { Header } from '@/components/counseling/CounselingComponents';
 import { Button, Card } from '@/components/ui/common';
 import { 
@@ -42,7 +43,7 @@ export default function PrescriptionPage() {
   const handleSubmitReview = async () => {
     setIsReviewing(true);
     try {
-      const res = await fetch(`/api/sessions/${sessionId}/review-plan`, {
+      const res = await fetchApi(`/api/sessions/${sessionId}/review-plan`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ staffPrescription: prescription }),

@@ -1,11 +1,14 @@
 import { NextResponse } from 'next/server';
 import { createServiceSupabaseClient } from '@/lib/supabase';
+import { verifyApiSecret } from '@/lib/api-guard';
 
 // スタッフ所見を保存
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ sessionId: string }> }
 ) {
+  const authError = verifyApiSecret(request);
+  if (authError) return authError;
   try {
     const { sessionId } = await params;
     const supabase = createServiceSupabaseClient();
@@ -47,6 +50,8 @@ export async function GET(
   request: Request,
   { params }: { params: Promise<{ sessionId: string }> }
 ) {
+  const authErr = verifyApiSecret(request);
+  if (authErr) return authErr;
   try {
     const { sessionId } = await params;
     const supabase = createServiceSupabaseClient();

@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server';
 import { createServiceSupabaseClient } from '@/lib/supabase';
+import { verifyApiSecret } from '@/lib/api-guard';
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ customerId: string }> }
 ) {
+  const authError = verifyApiSecret(request);
+  if (authError) return authError;
   try {
     const supabase = createServiceSupabaseClient();
     const { customerId } = await params;

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { ChevronLeft, User, Calendar, Droplets, FlaskConical, FileText, Loader2 } from 'lucide-react';
+import { fetchApi } from '@/lib/fetch-api';
 import { Card } from '@/components/ui/common';
 
 export default function HistoryDetailPage() {
@@ -15,7 +16,7 @@ export default function HistoryDetailPage() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch(`/api/sessions/${sessionId}`);
+        const res = await fetchApi(`/api/sessions/${sessionId}`);
         if (res.ok) {
           const data = await res.json();
           console.log('Session data:', data);

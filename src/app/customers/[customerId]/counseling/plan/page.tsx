@@ -10,6 +10,7 @@ import { Scissors, Star, Check, Sparkles, Share2, ChevronLeft, Loader2, ImageIco
 import { motion } from "framer-motion";
 import { useCounseling } from "@/contexts/CounselingContext";
 import { supabase } from "@/lib/supabase";
+import { fetchApi } from "@/lib/fetch-api";
 
 // Mock Data from AI
 // Mock Data Generator based on Matching Knowledge
@@ -154,7 +155,7 @@ export default function AiProposalPage() {
                 const faceShapeLabel = FACE_SHAPE_MAP[effectiveFaceShape] || effectiveFaceShape || "卵型";
                 console.log("[PlanPage] Sending to API:", { faceShapeLabel, data });
 
-                const res = await fetch('/api/ai-suggestion', {
+                const res = await fetchApi('/api/ai-suggestion', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -323,7 +324,7 @@ export default function AiProposalPage() {
                             setIsGeneratingSheet(true);
                             setSheetError(null);
                             try {
-                                const res = await fetch('/api/generate-hairstyle-image', {
+                                const res = await fetchApi('/api/generate-hairstyle-image', {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({

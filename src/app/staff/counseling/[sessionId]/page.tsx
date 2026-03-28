@@ -15,6 +15,7 @@ import {
   YesNoToggle 
 } from '@/components/counseling/CounselingComponents';
 import { Button, Section, Card } from '@/components/ui/common';
+import { fetchApi } from '@/lib/fetch-api';
 
 export default function CounselingPage() {
   const router = useRouter();
@@ -62,7 +63,7 @@ export default function CounselingPage() {
 
     console.log('Saving hair condition:', payload);
 
-    const res = await fetch(`/api/sessions/${sessionId}/hair-condition`, {
+    const res = await fetchApi(`/api/sessions/${sessionId}/hair-condition`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -86,7 +87,7 @@ export default function CounselingPage() {
 
     console.log('Saving staff assessment:', payload);
 
-    const res = await fetch(`/api/sessions/${sessionId}/assessment`, {
+    const res = await fetchApi(`/api/sessions/${sessionId}/assessment`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),

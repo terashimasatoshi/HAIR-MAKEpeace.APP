@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createServiceSupabaseClient } from '@/lib/supabase';
+import { verifyApiSecret, checkRateLimit } from '@/lib/api-guard';
 import Anthropic from '@anthropic-ai/sdk';
 
 const anthropic = new Anthropic({
@@ -10,6 +11,10 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ sessionId: string }> }
 ) {
+  const authError = verifyApiSecret(request);
+  if (authError) return authError;
+  const rateLimitError = checkRateLimit(request);
+  if (rateLimitError) return rateLimitError;
   try {
     const { sessionId } = await params;
     const supabase = createServiceSupabaseClient();

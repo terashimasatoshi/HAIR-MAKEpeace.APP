@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server';
 import { createServiceSupabaseClient } from '@/lib/supabase';
+import { verifyApiSecret } from '@/lib/api-guard';
 
 // セッション作成
 export async function POST(request: Request) {
+  const authError = verifyApiSecret(request);
+  if (authError) return authError;
   try {
     const supabase = createServiceSupabaseClient();
     const body = await request.json();

@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { NextResponse } from 'next/server';
+import { verifyApiSecret, checkRateLimit } from '@/lib/api-guard';
 
 interface GenerateReviewRequest {
   hitokoto: string;
@@ -10,6 +11,10 @@ interface GenerateReviewRequest {
 }
 
 export async function POST(request: Request) {
+  const authError = verifyApiSecret(request);
+  if (authError) return authError;
+  const rateLimitError = checkRateLimit(request);
+  if (rateLimitError) return rateLimitError;
   try {
     const body: GenerateReviewRequest = await request.json();
 
