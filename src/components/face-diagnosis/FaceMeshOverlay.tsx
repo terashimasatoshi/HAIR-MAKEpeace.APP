@@ -35,8 +35,7 @@ export function FaceMeshOverlay({
       const dpr = window.devicePixelRatio || 1;
       canvas.width = width * dpr;
       canvas.height = height * dpr;
-      canvas.style.width = `${width}px`;
-      canvas.style.height = `${height}px`;
+      // 表示サイズはCSS(w-full h-auto)に任せ、inline styleは設定しない
       ctx.scale(dpr, dpr);
 
       ctx.drawImage(img, 0, 0, width, height);
@@ -77,7 +76,6 @@ export function FaceMeshOverlay({
     <canvas
       ref={canvasRef}
       className="w-full h-auto rounded-xl"
-      style={{ maxWidth: width }}
     />
   );
 }
