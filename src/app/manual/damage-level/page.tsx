@@ -1,10 +1,34 @@
+"use client";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Info, HelpCircle, Activity, AlertTriangle, ArrowRight, Check } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Info, Activity, ChevronLeft, X } from "lucide-react";
 
 export default function DamageDiagnosticsManualPage() {
+    const handleClose = () => {
+        // 新しいタブで開かれた場合はタブを閉じる、それ以外はブラウザバック
+        if (window.opener || window.history.length <= 1) {
+            window.close();
+        } else {
+            window.history.back();
+        }
+    };
+
     return (
-        <div className="min-h-screen bg-[#FDFBF7] font-sans text-gray-800 p-6 md:p-12">
+        <div className="min-h-screen bg-[#FDFBF7] font-sans text-gray-800">
+            {/* 固定ヘッダー: 戻るボタン */}
+            <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-border px-4 py-3 flex items-center justify-between">
+                <Button variant="ghost" size="icon" onClick={handleClose}>
+                    <ChevronLeft className="h-6 w-6" />
+                </Button>
+                <span className="font-bold">ダメージ診断マニュアル</span>
+                <Button variant="ghost" size="icon" onClick={handleClose}>
+                    <X className="h-5 w-5" />
+                </Button>
+            </header>
+
+            <div className="p-6 md:p-12">
             <main className="max-w-4xl mx-auto space-y-8">
 
                 {/* Header */}
@@ -258,6 +282,7 @@ export default function DamageDiagnosticsManualPage() {
                 </section>
 
             </main>
+            </div>
         </div>
     );
 }

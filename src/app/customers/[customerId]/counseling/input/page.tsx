@@ -340,9 +340,10 @@ export default function CounselingInputPage() {
     ]);
 
     const getDamageColor = (level: number) => {
-        if (level <= 1) return "bg-[#4A7C59]"; // Green
-        if (level <= 3) return "bg-[#E3B23C]"; // Yellow
-        return "bg-[#D87B5A]"; // Red
+        if (level <= 2) return "bg-[#4A7C59]"; // Green — 軽度
+        if (level <= 4) return "bg-[#E3B23C]"; // Yellow — 中度
+        if (level <= 8) return "bg-[#D87B5A]"; // Orange — 重度
+        return "bg-[#DC2626]"; // Red — 危険
     };
 
     return (
@@ -756,13 +757,13 @@ export default function CounselingInputPage() {
                                     診断マニュアル（確認方法）
                                 </Link>
                             </div>
-                            <div className="flex justify-between gap-2">
-                                {[1, 2, 3, 4, 5].map((level) => (
+                            <div className="grid grid-cols-5 gap-1.5">
+                                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((level) => (
                                     <button
                                         key={level}
                                         onClick={() => setDamageLevel(level)}
                                         className={cn(
-                                            "flex-1 h-12 rounded-lg font-bold transition-all duration-200 flex flex-col items-center justify-center text-sm",
+                                            "h-11 rounded-lg font-bold transition-all duration-200 flex items-center justify-center text-sm",
                                             damageLevel === level
                                                 ? cn("text-white shadow-md scale-105", getDamageColor(level))
                                                 : "bg-gray-100 text-gray-500 hover:bg-gray-200"
@@ -774,7 +775,8 @@ export default function CounselingInputPage() {
                             </div>
                             <div className="flex justify-between mt-2 text-xs text-muted-foreground px-1">
                                 <span>健康</span>
-                                <span>ハイダメージ</span>
+                                <span>中度</span>
+                                <span>危険</span>
                             </div>
                         </AccordionContent>
                     </AccordionItem>

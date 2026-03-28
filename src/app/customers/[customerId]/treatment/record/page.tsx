@@ -329,7 +329,7 @@ export default function TreatmentRecordPage() {
                         </div>
                         <Slider
                             defaultValue={[2]}
-                            max={5}
+                            max={10}
                             min={1}
                             step={1}
                             onValueChange={setFinishDamage}
@@ -337,7 +337,9 @@ export default function TreatmentRecordPage() {
                         />
                         <div className="flex justify-between text-xs text-muted-foreground">
                             <span>1: 健康</span>
-                            <span>5: ハイダメージ</span>
+                            <span>4: 中度</span>
+                            <span>8: 重度</span>
+                            <span>10: 危険</span>
                         </div>
                     </div>
                 </section>
