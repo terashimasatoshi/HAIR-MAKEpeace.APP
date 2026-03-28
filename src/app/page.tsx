@@ -5,25 +5,92 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UserPlus, Search, Settings } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { UserPlus, Search, Settings, PlayCircle, Clock, User } from "lucide-react";
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import { useStylist } from '@/contexts/StylistContext';
+import { supabase } from '@/lib/supabase';
+
+interface PendingSession {
+  id: string;
+  customerName: string;
+  customerId: string;
+  selectedMenus: string[];
+  createdAt: string;
+  stylistName: string | null;
+}
 
 export default function Home() {
+  const router = useRouter();
   const [currentTime, setCurrentTime] = useState<string>('');
   const { currentStylist, stylists, isLoading, selectStylist } = useStylist();
+  const [pendingSessions, setPendingSessions] = useState<PendingSession[]>([]);
+  const [loadingPending, setLoadingPending] = useState(true);
 
   useEffect(() => {
-    // Client-side only date formatting to avoid hydration mismatch
     const updateTime = () => {
       const now = new Date();
       setCurrentTime(format(now, "yyyy年M月d日（E）HH:mm", { locale: ja }));
     };
     updateTime();
-    const timer = setInterval(updateTime, 60000); // Update every minute
+    const timer = setInterval(updateTime, 60000);
     return () => clearInterval(timer);
+  }, []);
+
+  // 未完了セッション（今日のAI診断済み＋施術記録未完了）を取得
+  useEffect(() => {
+    const fetchPending = async () => {
+      try {
+        const today = new Date().toISOString().split('T')[0];
+        const { data, error } = await supabase
+          .from('counseling_sessions')
+          .select(`
+            id,
+            customer_id,
+            selected_menus,
+            created_at,
+            ai_suggestion,
+            customer:customer_id(name),
+            stylist:stylist_id(name)
+          `)
+          .neq('status', 'completed')
+          .gte('created_at', `${today}T00:00:00`)
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.error('Pending sessions error:', error);
+          return;
+        }
+
+        const sessions: PendingSession[] = (data || [])
+          .filter((s) => s.ai_suggestion != null) // AI診断済みのみ
+          .map((s) => {
+            const rawCustomer = s.customer as unknown;
+            const cust = Array.isArray(rawCustomer) ? rawCustomer[0] : rawCustomer;
+            const rawStylist = s.stylist as unknown;
+            const sty = Array.isArray(rawStylist) ? rawStylist[0] : rawStylist;
+            return {
+              id: s.id,
+              customerId: s.customer_id,
+              customerName: (cust as { name: string } | null)?.name || '不明',
+              selectedMenus: (s.selected_menus as string[]) || [],
+              createdAt: s.created_at,
+              stylistName: (sty as { name: string } | null)?.name || null,
+            };
+          });
+
+        setPendingSessions(sessions);
+      } catch (err) {
+        console.error('Failed to fetch pending sessions:', err);
+      } finally {
+        setLoadingPending(false);
+      }
+    };
+
+    fetchPending();
   }, []);
 
   return (
@@ -86,7 +153,51 @@ export default function Home() {
           </CardContent>
         </Card>
 
-        {/* 3. Main Action Cards */}
+        {/* 3. Pending Sessions */}
+        {!loadingPending && pendingSessions.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Clock size={16} className="text-accent" />
+              <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-wider">施術中のお客様</h2>
+              <Badge variant="secondary" className="text-xs">{pendingSessions.length}</Badge>
+            </div>
+            {pendingSessions.map((session) => {
+              const time = session.createdAt
+                ? format(new Date(session.createdAt), 'HH:mm', { locale: ja })
+                : '';
+              return (
+                <button
+                  key={session.id}
+                  onClick={() => router.push(`/customers/${session.customerId}/treatment/record?resume=${session.id}`)}
+                  className="w-full text-left"
+                >
+                  <Card className="border-l-4 border-l-accent hover:shadow-md transition-shadow">
+                    <CardContent className="p-4 flex items-center justify-between">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center flex-shrink-0">
+                          <User size={18} className="text-accent" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-bold text-foreground truncate">{session.customerName} 様</p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {time}{session.stylistName ? ` ・ ${session.stylistName}` : ''}
+                            {session.selectedMenus.length > 0 && ` ・ ${session.selectedMenus.join(', ')}`}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 text-primary flex-shrink-0 ml-2">
+                        <PlayCircle size={20} />
+                        <span className="text-xs font-bold">再開</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* 4. Main Action Cards */}
         <div className="space-y-6">
           {/* New Customer Card */}
           <Link href="/customers/new" className="block group">

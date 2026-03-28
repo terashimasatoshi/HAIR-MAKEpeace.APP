@@ -77,6 +77,10 @@ type CounselingContextType = {
     saveToSupabase: (customerId: string, aiSuggestion?: object) => Promise<{ visitId: string | null; sessionId: string | null }>;
     saveTreatment: (custId: string, treatmentData: { selectedProducts: string[]; finishDamageLevel: number; notes: string }) => Promise<boolean>;
     resetData: () => void;
+    /** DBからセッションを復元する */
+    restoreSession: (sessionId: string) => Promise<boolean>;
+    /** 復元されたセッションID */
+    restoredSessionId: string | null;
 };
 
 const CounselingContext = createContext<CounselingContextType | undefined>(undefined);
@@ -202,10 +206,60 @@ export function CounselingProvider({ children, customerId }: { children: ReactNo
     const resetData = () => {
         setData(initialData);
         setCustomer(null);
+        setRestoredSessionId(null);
     };
 
     const [visitId, setVisitId] = useState<string | null>(null);
     const [counselingSessionId, setCounselingSessionId] = useState<string | null>(null);
+    const [restoredSessionId, setRestoredSessionId] = useState<string | null>(null);
+
+    /** DBから未完了セッションを復元してContextにロードする */
+    const restoreSession = async (sessionId: string): Promise<boolean> => {
+        try {
+            const { data: session, error } = await supabase
+                .from('counseling_sessions')
+                .select('*, customer:customer_id(id, name, kana, age, phone), visit_id')
+                .eq('id', sessionId)
+                .single();
+
+            if (error || !session) {
+                console.error('Session restore error:', error);
+                return false;
+            }
+
+            // 顧客情報を復元
+            const rawCustomer = session.customer;
+            const cust = Array.isArray(rawCustomer) ? rawCustomer[0] : rawCustomer;
+            if (cust) setCustomer(cust);
+
+            // visitIdを復元
+            if (session.visit_id) setVisitId(session.visit_id);
+            setCounselingSessionId(session.id);
+            setRestoredSessionId(session.id);
+
+            // CounselingDataを復元
+            const aiSuggestion = session.ai_suggestion as Record<string, unknown> | null;
+            setData(prev => ({
+                ...prev,
+                gender: session.gender || '',
+                concerns: session.concerns || [],
+                damageLevel: session.damage_level || 1,
+                faceShape: session.face_shape || '',
+                personalColor: session.personal_color_season
+                    ? { base: (session.personal_color_base as 'warm' | 'cool') || 'warm', season: session.personal_color_season }
+                    : null,
+                selectedMenus: session.selected_menus || [],
+                request: session.request || '',
+                stylistId: session.stylist_id || null,
+                aiPlan: aiSuggestion,
+            }));
+
+            return true;
+        } catch (err) {
+            console.error('Session restore failed:', err);
+            return false;
+        }
+    };
 
     const persistDiagnosisCache = (custId: string) => {
         if (!ENABLE_LOCAL_FALLBACK) return;
@@ -396,7 +450,7 @@ export function CounselingProvider({ children, customerId }: { children: ReactNo
     };
 
     return (
-        <CounselingContext.Provider value={{ customer, setCustomer, stylist, data, isLoadingCustomer, updateData, updateSectionData, saveToSupabase, saveTreatment, resetData }}>
+        <CounselingContext.Provider value={{ customer, setCustomer, stylist, data, isLoadingCustomer, updateData, updateSectionData, saveToSupabase, saveTreatment, resetData, restoreSession, restoredSessionId }}>
             {children}
         </CounselingContext.Provider>
     );

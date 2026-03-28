@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -154,8 +154,22 @@ const PRODUCTS = {
 export default function TreatmentRecordPage() {
     const router = useRouter();
     const params = useParams();
+    const searchParams = useSearchParams();
     const customerId = params.customerId as string;
-    const { saveTreatment, stylist } = useCounseling();
+    const resumeSessionId = searchParams.get('resume');
+    const { saveTreatment, stylist, restoreSession } = useCounseling();
+    const [isRestoring, setIsRestoring] = useState(!!resumeSessionId);
+
+    // セッション再開: URLにresume=sessionIdがある場合、DBから復元
+    useEffect(() => {
+        if (!resumeSessionId) return;
+        const restore = async () => {
+            setIsRestoring(true);
+            await restoreSession(resumeSessionId);
+            setIsRestoring(false);
+        };
+        restore();
+    }, [resumeSessionId, restoreSession]);
 
     // State
     const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
@@ -262,6 +276,17 @@ export default function TreatmentRecordPage() {
             </Card>
         ));
     };
+
+    if (isRestoring) {
+        return (
+            <div className="min-h-screen bg-background flex items-center justify-center">
+                <div className="text-center space-y-3">
+                    <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
+                    <p className="text-muted-foreground text-sm">セッションを復元しています...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-background pb-24">
