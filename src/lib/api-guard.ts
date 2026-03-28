@@ -1,29 +1,69 @@
 import { NextResponse } from "next/server";
 
 /**
- * APIルート保護: 内部APIシークレットの検証
+ * APIルート保護: Same-Originリクエストの検証
  *
  * 全てのAPIルートのハンドラ冒頭で呼び出す。
- * クライアント側は fetchApi() 経由でリクエストすることで自動的にヘッダーが付与される。
+ * ブラウザからの正規リクエスト（Origin/Refererがアプリのホストと一致）のみ許可する。
  *
- * 環境変数 INTERNAL_API_SECRET が未設定の場合はガードをスキップ（開発時の利便性）
+ * 開発環境（NODE_ENV=development）ではスキップする。
  */
 export function verifyApiSecret(request: Request): NextResponse | null {
-  const secret = process.env.INTERNAL_API_SECRET;
+  // 開発環境ではスキップ
+  if (process.env.NODE_ENV === "development") return null;
 
-  // 環境変数未設定ならスキップ（ローカル開発用）
-  if (!secret) return null;
+  const origin = request.headers.get("origin");
+  const referer = request.headers.get("referer");
 
-  const provided = request.headers.get("x-api-secret");
+  // Vercel の自動設定ホスト名、または明示設定
+  const allowedHost =
+    process.env.NEXT_PUBLIC_VERCEL_URL || process.env.VERCEL_URL || "";
 
-  if (provided !== secret) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401 }
-    );
+  // origin or referer いずれかがアプリのホストに一致すれば許可
+  if (origin) {
+    const originHost = safeHostname(origin);
+    if (originHost && isAllowedHost(originHost, allowedHost)) return null;
   }
 
-  return null;
+  if (referer) {
+    const refererHost = safeHostname(referer);
+    if (refererHost && isAllowedHost(refererHost, allowedHost)) return null;
+  }
+
+  return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+}
+
+function safeHostname(urlOrOrigin: string): string | null {
+  try {
+    return new URL(urlOrOrigin).hostname;
+  } catch {
+    return null;
+  }
+}
+
+function isAllowedHost(hostname: string, vercelUrl: string): boolean {
+  // localhost は開発環境フォールバック
+  if (hostname === "localhost" || hostname === "127.0.0.1") return true;
+
+  // Vercel のデプロイ URL と一致
+  if (vercelUrl) {
+    const vercelHostname = vercelUrl.replace(/^https?:\/\//, "").split("/")[0];
+    if (hostname === vercelHostname) return true;
+  }
+
+  // Vercel のプレビュー / プロダクション URL パターン
+  if (
+    hostname.endsWith(".vercel.app") ||
+    hostname.endsWith(".vercel.sh")
+  ) {
+    return true;
+  }
+
+  // カスタムドメインが設定されている場合
+  const customDomain = process.env.NEXT_PUBLIC_APP_DOMAIN;
+  if (customDomain && hostname === customDomain) return true;
+
+  return false;
 }
 
 /**

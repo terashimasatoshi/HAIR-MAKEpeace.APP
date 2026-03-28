@@ -81,14 +81,13 @@ export function Camera({ onCapture, onAggregatedResult }: CameraProps) {
   useEffect(() => {
     let mounted = true;
 
-    // リトライ時にstateをリセット
-    setError(null);
-    setErrorType(null);
-    setIsReady(false);
-    setFaceDetected(undefined);
-    setIsCapturing(false);
-
     async function startCamera() {
+      // リトライ時にstateをリセット（非同期関数内で呼び出し）
+      setError(null);
+      setErrorType(null);
+      setIsReady(false);
+      setFaceDetected(undefined);
+      setIsCapturing(false);
       let mediaStream: MediaStream;
       try {
         mediaStream = await navigator.mediaDevices.getUserMedia({

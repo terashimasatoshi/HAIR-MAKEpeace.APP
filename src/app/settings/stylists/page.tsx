@@ -26,20 +26,19 @@ export default function StylistManagementPage() {
 
     const fetchStylists = async () => {
         setIsLoading(true);
-        const { data, error } = await supabase
+        const { data } = await supabase
             .from('stylists')
             .select('*')
             .order('created_at', { ascending: true });
 
         if (data) {
-            setStylists(data.map((s: any) => ({ ...s, is_active: s.is_active ?? true })));
+            setStylists(data.map((s: Stylist) => ({ ...s, is_active: s.is_active ?? true })));
         }
         setIsLoading(false);
     };
 
-    useEffect(() => {
-        fetchStylists();
-    }, []);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on mount, setState is inside async callback
+    useEffect(() => { fetchStylists(); }, []);
 
     const addStylist = async () => {
         if (!newName.trim()) return;

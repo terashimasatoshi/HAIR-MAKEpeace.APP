@@ -17,8 +17,8 @@ export async function GET(request: Request) {
       .order('updated_at', { ascending: false });
 
     if (search) {
-      // 特殊文字をエスケープしてからフィルタ（PostgREST構文インジェクション防止）
-      const sanitized = search.replace(/[%_\\]/g, (c) => `\\${c}`);
+      // PostgREST構文に影響する文字とLIKE特殊文字をすべてエスケープ
+      const sanitized = search.replace(/[%_\\(),."']/g, (c) => `\\${c}`);
       query = query.or(`name.ilike.%${sanitized}%,phone.ilike.%${sanitized}%`);
     }
 

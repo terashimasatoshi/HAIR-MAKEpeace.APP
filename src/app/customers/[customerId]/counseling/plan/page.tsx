@@ -468,10 +468,10 @@ export default function AiProposalPage() {
                             }
                             await saveToSupabase(customerId, aiSuggestionWithImage);
                             alert('一時保存しました');
+                            router.push('/');
                         } catch (err) {
                             console.error('Save error:', err);
                             alert('保存に失敗しました');
-                        } finally {
                             setIsSaving(false);
                         }
                     }}

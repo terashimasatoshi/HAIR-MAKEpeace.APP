@@ -30,42 +30,44 @@ export function StylistProvider({ children }: { children: ReactNode }) {
     const [stylists, setStylists] = useState<Stylist[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
-    const fetchStylists = async () => {
-        setIsLoading(true);
-        const { data, error } = await supabase
-            .from('stylists')
-            .select('id, name')
-            .eq('is_active', true)
-            .order('created_at', { ascending: true });
+    useEffect(() => {
+        let cancelled = false;
+        const fetchStylists = async () => {
+            const { data, error } = await supabase
+                .from('stylists')
+                .select('id, name')
+                .eq('is_active', true)
+                .order('created_at', { ascending: true });
 
-        const normalizedStylists = (data || []).map((s: any) => ({ ...s, is_active: true }));
-        const effectiveStylists = (!error && normalizedStylists.length > 0)
-            ? normalizedStylists
-            : (ENABLE_LOCAL_FALLBACK ? FALLBACK_STYLISTS : []);
+            if (cancelled) return;
 
-        if (error && ENABLE_LOCAL_FALLBACK) {
-            console.error('Failed to fetch stylists, using fallback:', error);
-        }
+            const normalizedStylists = (data || []).map((s: { id: string; name: string }) => ({ ...s, is_active: true as const }));
+            const effectiveStylists = (!error && normalizedStylists.length > 0)
+                ? normalizedStylists
+                : (ENABLE_LOCAL_FALLBACK ? FALLBACK_STYLISTS : []);
 
-        setStylists(effectiveStylists);
+            if (error && ENABLE_LOCAL_FALLBACK) {
+                console.error('Failed to fetch stylists, using fallback:', error);
+            }
 
-        // Restore from localStorage or default to first
-        const savedId = localStorage.getItem('peace_stylist_id');
-        if (savedId) {
-            const saved = effectiveStylists.find(s => s.id === savedId);
-            if (saved) {
-                setCurrentStylist(saved);
+            setStylists(effectiveStylists);
+
+            // Restore from localStorage or default to first
+            const savedId = localStorage.getItem('peace_stylist_id');
+            if (savedId) {
+                const saved = effectiveStylists.find(s => s.id === savedId);
+                if (saved) {
+                    setCurrentStylist(saved);
+                } else if (effectiveStylists.length > 0) {
+                    setCurrentStylist(effectiveStylists[0]);
+                }
             } else if (effectiveStylists.length > 0) {
                 setCurrentStylist(effectiveStylists[0]);
             }
-        } else if (effectiveStylists.length > 0) {
-            setCurrentStylist(effectiveStylists[0]);
-        }
-        setIsLoading(false);
-    };
-
-    useEffect(() => {
+            setIsLoading(false);
+        };
         fetchStylists();
+        return () => { cancelled = true; };
     }, []);
 
     const selectStylist = (id: string) => {
