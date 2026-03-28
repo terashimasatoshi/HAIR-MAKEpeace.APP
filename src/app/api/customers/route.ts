@@ -17,9 +17,11 @@ export async function GET(request: Request) {
       .order('updated_at', { ascending: false });
 
     if (search) {
-      // PostgREST構文に影響する文字とLIKE特殊文字をすべてエスケープ
-      const sanitized = search.replace(/[%_\\(),."']/g, (c) => `\\${c}`);
-      query = query.or(`name.ilike.%${sanitized}%,phone.ilike.%${sanitized}%`);
+      // 文字・数字・スペース・ハイフンのみ許可（PostgREST構文混入を根本排除）
+      const safe = search.replace(/[^\p{L}\p{N}\s\-]/gu, "").trim();
+      if (safe) {
+        query = query.or(`name.ilike.%${safe}%,phone.ilike.%${safe}%`);
+      }
     }
 
     const { data, error } = await query;
