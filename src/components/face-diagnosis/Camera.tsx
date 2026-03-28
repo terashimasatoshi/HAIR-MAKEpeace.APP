@@ -54,6 +54,9 @@ export function Camera({ onCapture, onAggregatedResult }: CameraProps) {
   const [landmarkerReady, setLandmarkerReady] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
   const [captureProgress, setCaptureProgress] = useState(0);
+  const [retryCount, setRetryCount] = useState(0);
+  /** エラーの種別: camera=カメラ権限エラー, analysis=解析エラー(リトライ可) */
+  const [errorType, setErrorType] = useState<"camera" | "analysis" | null>(null);
 
   // 顔検出を1回実行
   const detectOnce = useCallback(() => {
@@ -78,6 +81,13 @@ export function Camera({ onCapture, onAggregatedResult }: CameraProps) {
   useEffect(() => {
     let mounted = true;
 
+    // リトライ時にstateをリセット
+    setError(null);
+    setErrorType(null);
+    setIsReady(false);
+    setFaceDetected(undefined);
+    setIsCapturing(false);
+
     async function startCamera() {
       let mediaStream: MediaStream;
       try {
@@ -93,6 +103,7 @@ export function Camera({ onCapture, onAggregatedResult }: CameraProps) {
         console.error("getUserMedia failed:", e);
         if (mounted) {
           setError("カメラにアクセスできません。カメラの使用を許可してください。");
+          setErrorType("camera");
         }
         return;
       }
@@ -133,7 +144,7 @@ export function Camera({ onCapture, onAggregatedResult }: CameraProps) {
         streamRef.current = null;
       }
     };
-  }, []);
+  }, [retryCount]);
 
   useEffect(() => {
     if (!isReady || !landmarkerReady) return;
@@ -251,25 +262,10 @@ export function Camera({ onCapture, onAggregatedResult }: CameraProps) {
       }
     }
 
-    // 最終フレームの画像をキャプチャ（結果表示用）
-    const canvas = document.createElement("canvas");
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext("2d")!;
-    ctx.translate(canvas.width, 0);
-    ctx.scale(-1, 1);
-    ctx.drawImage(video, 0, 0);
-
-    // カメラ停止
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((t) => t.stop());
-      streamRef.current = null;
-    }
-
     setIsCapturing(false);
 
     if (frameResults.length === 0) {
-      // 最多の除外理由に応じたメッセージ
+      // 失敗: カメラは停止せず、エラー表示して再試行可能にする
       const topReason = (Object.entries(rejectCounts) as [RejectReason, number][])
         .sort((a, b) => b[1] - a[1])[0];
 
@@ -284,7 +280,28 @@ export function Camera({ onCapture, onAggregatedResult }: CameraProps) {
         ? messages[topReason[0]]
         : "顔を安定して検出できませんでした。再度お試しください。"
       );
+      setErrorType("analysis");
+
+      // 検出ループを再開（カメラは動いたまま）
+      if (landmarkerRef.current) {
+        timerRef.current = setInterval(detectOnce, 200);
+      }
       return;
+    }
+
+    // 成功: 画像キャプチャ
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext("2d")!;
+    ctx.translate(canvas.width, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, 0, 0);
+
+    // カメラ停止（成功時のみ）
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
     }
 
     // 集約: 多数決 + 平均スコア
@@ -373,13 +390,17 @@ export function Camera({ onCapture, onAggregatedResult }: CameraProps) {
     onCapture(canvas);
   }, [onCapture]);
 
-  if (error) {
+  // カメラ権限エラー: リトライボタンで再起動を試みる
+  if (error && errorType === "camera") {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[300px] p-8 text-center">
-        <p className="text-red-500 text-lg mb-4">{error}</p>
+      <div className="flex flex-col items-center justify-center min-h-[300px] p-8 text-center gap-4">
+        <p className="text-red-500 text-lg">{error}</p>
         <p className="text-muted-foreground text-sm">
-          設定からカメラへのアクセスを許可してから、ページを再読み込みしてください。
+          設定からカメラへのアクセスを許可してください。
         </p>
+        <Button variant="outline" onClick={() => setRetryCount((c) => c + 1)}>
+          もう一度試す
+        </Button>
       </div>
     );
   }
@@ -411,17 +432,27 @@ export function Camera({ onCapture, onAggregatedResult }: CameraProps) {
         )}
       </div>
 
+      {/* 解析エラー: カメラは動いたまま再試行を促す */}
+      {error && errorType === "analysis" && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-center">
+          <p className="text-red-600 text-sm font-bold mb-1">{error}</p>
+          <p className="text-red-500 text-xs mb-2">条件を調整して、もう一度撮影してください</p>
+        </div>
+      )}
+
       <div className="text-center space-y-1">
-        <p className="text-muted-foreground text-sm">
-          {isCapturing
-            ? "そのまま正面を向いてお待ちください"
-            : !landmarkerReady
-              ? "顔をガイド枠に合わせてください"
-              : faceDetected
-                ? "顔を検出しました。撮影できます"
-                : "正面を向いて、枠内に顔全体を合わせてください"}
-        </p>
-        {!isCapturing && landmarkerReady && (
+        {!(error && errorType === "analysis") && (
+          <p className="text-muted-foreground text-sm">
+            {isCapturing
+              ? "そのまま正面を向いてお待ちください"
+              : !landmarkerReady
+                ? "顔をガイド枠に合わせてください"
+                : faceDetected
+                  ? "顔を検出しました。撮影できます"
+                  : "正面を向いて、枠内に顔全体を合わせてください"}
+          </p>
+        )}
+        {!isCapturing && landmarkerReady && !error && (
           <p className="text-xs text-muted-foreground/70">
             明るい場所で、前髪は分けて額を出すと精度が上がります
           </p>
@@ -429,12 +460,16 @@ export function Camera({ onCapture, onAggregatedResult }: CameraProps) {
       </div>
 
       <Button
-        onClick={useAggregation ? handleAggregatedCapture : handleSingleCapture}
+        onClick={() => {
+          setError(null);
+          setErrorType(null);
+          (useAggregation ? handleAggregatedCapture : handleSingleCapture)();
+        }}
         disabled={!canCapture}
         size="lg"
         className="min-w-[200px]"
       >
-        {isCapturing ? "解析中..." : "撮影する"}
+        {isCapturing ? "解析中..." : error ? "もう一度撮影する" : "撮影する"}
       </Button>
     </div>
   );
