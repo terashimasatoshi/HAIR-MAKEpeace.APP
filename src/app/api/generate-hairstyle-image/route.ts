@@ -89,106 +89,61 @@ export async function POST(request: Request) {
 }
 
 function buildPrompt(data: GenerateImageRequest): string {
-  const stylesText = data.styles
-    .map((s, i) => `${i + 1}. ${s.title}：${s.desc}`)
-    .join('\n');
-
-  const colorsText = data.colors
-    .map((c) => `・${c.name}（${c.code}）- ${c.desc}`)
-    .join('\n');
-
-  const adviceText = data.advice
-    .map((a) => `・${a}`)
-    .join('\n');
-
   const isMale = data.gender === 'male';
-  const genderLabel = isMale ? '男性' : '女性';
-  const personDesc = isMale ? '日本人男性' : '日本人女性';
-  const decoDesc = isMale
-    ? 'シンプルで洗練されたライン・幾何学模様など控えめなデコレーション'
-    : '花・星・キラキラなど華やかなデコレーション要素を散りばめる';
-  const swatchShape = isMale ? '丸型' : 'ハート型';
+  const personDesc = isMale ? 'Japanese man' : 'Japanese woman';
 
-  const concernsText = data.concerns?.length
-    ? data.concerns.join('・')
-    : 'なし';
-  const damageLevelText = data.damageLevel
-    ? `Lv.${data.damageLevel}/5`
-    : '未診断';
-  const customerName = data.customerName || 'お客様';
-  const dateText = data.date || '';
-  const stylistText = data.stylistName || '';
+  // メインスタイル名（英語表記 — 文字化け防止）
+  const mainStyleTitle = data.styles[0]?.title || 'Recommended Style';
 
-  return `あなたは美容室「HAIR & MAKE peace」のカウンセリングカード用イラストを描くプロのイラストレーターです。
-以下の情報をもとに、${genderLabel}のお客様への総合カウンセリングカードを1枚の縦長イラストにまとめてください。
+  // カラーコード（hex値はAIが正確に描ける）
+  const colorSwatches = data.colors
+    .slice(0, 3)
+    .map((c) => `${c.code} (${c.name})`)
+    .join(', ');
 
-━━━━━ お客様情報 ━━━━━
-【お名前】${customerName} 様
-【日付】${dateText}
-【担当】${stylistText}
-【性別】${genderLabel}
-【お悩み】${concernsText}
-【ダメージレベル】${damageLevelText}
+  return `You are a professional illustrator for a hair salon called "HAIR & MAKE peace".
+Create a single vertical (9:16 aspect ratio) counseling card illustration.
 
-━━━━━ 診断結果 ━━━━━
-【顔型】${data.faceShape}
-【パーソナルカラー】${data.personalColor}
+IMPORTANT RULES FOR TEXT:
+- Use ONLY English for ALL text in the image. NO Japanese text at all.
+- All text must be LARGE and clearly readable (minimum 24pt equivalent)
+- Maximum 20 words total in the entire image
+- If text would be smaller than a title size, DO NOT include it
 
-━━━━━ AI提案 ━━━━━
-【おすすめスタイル】
-${stylesText}
+== CONTENT ==
+Customer: ${data.customerName || 'Customer'}
+Face shape: ${data.faceShape}
+Personal color: ${data.personalColor}
+Main style: ${mainStyleTitle}
+Colors: ${colorSwatches}
 
-【おすすめカラー】
-${colorsText}
+== LAYOUT (top to bottom) ==
 
-【スタイリングのコツ】
-${adviceText}
+1. HEADER (top 10%)
+   - "HAIR & MAKE peace" in elegant serif font, LARGE
+   - "Counseling Card" subtitle
 
-【AIからのアドバイス】
-${data.aiAnalysis}
+2. MAIN ILLUSTRATION (center 60% - this is the hero)
+   - A beautiful ${personDesc} with the recommended hairstyle "${mainStyleTitle}"
+   - Watercolor / soft illustration style
+   - The hair color should reflect: ${data.colors[0]?.name || 'natural'}
+   - Show the hairstyle clearly: front or 3/4 angle view
+   - Hair should look glossy, healthy, with visible texture and movement
+   - Face shape matches: ${data.faceShape}
 
-━━━━━ デザイン指示 ━━━━━
+3. COLOR PALETTE (15%)
+   - 3 color circles showing recommended colors: ${colorSwatches}
+   - Each circle is large (at least 40px equivalent) with the color name below in English
 
-## 画像仕様
-- 縦長（9:16のアスペクト比、スマートフォン全画面表示向け）
-- 解像度は高めに
+4. FOOTER (bottom 10%)
+   - "HAIR & MAKE peace"
+   - "Thank you!"
 
-## レイアウト（上から下へ）
-
-### ① ヘッダー帯（最上部）
-- 「HAIR & MAKE peace」ロゴ風テキスト
-- 「Counseling Report」サブタイトル
-- 日付「${dateText}」と担当「${stylistText}」を小さく
-
-### ② お客様プロフィール帯
-- 「${customerName} 様」をエレガントに表示
-- 診断バッジ風に：顔型「${data.faceShape}」・パーソナルカラー「${data.personalColor}」・ダメージ「${damageLevelText}」
-- お悩みを小さなタグ風に：${concernsText}
-
-### ③ スタイル提案エリア（メイン・最も大きく）
-- 中央に1つ目のスタイル「${data.styles[0]?.title}」を大きくメインイラストで描く
-- 左右に2つ目・3つ目のスタイルをやや小さめに描く
-- 各スタイルにスタイル名ラベルと一言説明
-
-### ④ カラーパレットエリア
-- おすすめカラーを${swatchShape}のカラースウォッチで横並び表示
-- 各色にカラー名ラベル付き
-
-### ⑤ アドバイスエリア
-- 「スタイリングのコツ」を箇条書きで
-- 手書き風のメモスタイル
-
-### ⑥ フッター帯（最下部）
-- 「HAIR & MAKE peace」
-- 「Thank you for visiting!」
-
-## イラストの条件
-- ${personDesc}のヘアスタイルイラスト（水彩画風・温かみのあるタッチ）
-- 背景はクリーム色〜ベージュ系の紙のようなテクスチャ
-- ${decoDesc}
-- 各セクションは枠線や背景色で区切り、視認性を確保
-- 美容室のカウンセリングカードとしてプロフェッショナルかつ親しみやすいデザイン
-- 髪のツヤ感・質感・カラーがしっかり伝わるように
-- 顔は正面〜やや斜めで描き、髪型のシルエットが分かるようにする
-- テキストは日本語で、読みやすいフォントサイズで描く`;
+== STYLE ==
+- Warm, inviting watercolor illustration style
+- Background: cream/beige paper-like texture
+- ${isMale ? 'Clean, minimal decorative elements' : 'Soft floral/sparkle decorations scattered around'}
+- Professional yet approachable salon card design
+- Color scheme: warm greens (#4A7C59) and golds (#C5A572) as accent colors
+- Each section separated by subtle dividers or background tones`;
 }
