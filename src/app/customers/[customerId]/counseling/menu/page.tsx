@@ -141,7 +141,7 @@ export default function MenuSelectionPage() {
                     <span className="text-sm text-muted-foreground">
                         {customer?.age ? `${customer.age}歳` : ""}
                     </span>
-                    <Badge variant="outline" className="ml-auto border-dashed">ハイダメージ (Lv.{damageLevel})</Badge>
+                    <Badge variant="outline" className="ml-auto border-dashed">ダメージ Lv.{damageLevel}</Badge>
                 </div>
 
                 {/* 3. Menu Accordion */}
