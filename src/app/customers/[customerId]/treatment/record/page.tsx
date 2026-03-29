@@ -163,13 +163,18 @@ export default function TreatmentRecordPage() {
     // セッション再開: URLにresume=sessionIdがある場合、DBから復元
     useEffect(() => {
         if (!resumeSessionId) return;
+        let cancelled = false;
         const restore = async () => {
             setIsRestoring(true);
-            await restoreSession(resumeSessionId);
-            setIsRestoring(false);
+            console.log('[TreatmentRecord] Restoring session:', resumeSessionId);
+            const success = await restoreSession(resumeSessionId);
+            console.log('[TreatmentRecord] Restore result:', success);
+            if (!cancelled) setIsRestoring(false);
         };
         restore();
-    }, [resumeSessionId, restoreSession]);
+        return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [resumeSessionId]);
 
     // State
     const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
