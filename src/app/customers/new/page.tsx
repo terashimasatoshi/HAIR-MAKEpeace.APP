@@ -45,9 +45,21 @@ export default function NewCustomerPage() {
             String.fromCharCode(ch.charCodeAt(0) + 0x60)
         );
 
+    // ひらがなかどうか判定
+    const isHiragana = (str: string) => /[\u3041-\u3096]/.test(str);
+
+    // IME入力開始: 前回の収集データをリセット
+    const handleCompositionStart = useCallback(() => {
+        composingRef.current = '';
+    }, []);
+
     // IMEの変換前テキスト（ひらがな）を収集
+    // ブラウザによっては確定直前に漢字が入るので、ひらがなの場合のみ保存
     const handleCompositionUpdate = useCallback((e: React.CompositionEvent<HTMLInputElement>) => {
-        composingRef.current = e.data || '';
+        const text = e.data || '';
+        if (isHiragana(text)) {
+            composingRef.current = text;
+        }
     }, []);
 
     // IME確定時にカナフィールドへ反映
@@ -163,6 +175,7 @@ export default function NewCustomerPage() {
                                     setKana('');
                                 }
                             }}
+                            onCompositionStart={handleCompositionStart}
                             onCompositionUpdate={handleCompositionUpdate}
                             onCompositionEnd={handleCompositionEnd}
                         />
