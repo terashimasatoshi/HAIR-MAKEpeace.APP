@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState, useEffect } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -87,9 +87,22 @@ const mapCustomerPersonalColorTypeToForm = (personalColorType?: string | null): 
 export default function CounselingInputPage() {
     const router = useRouter();
     const params = useParams();
+    const searchParams = useSearchParams();
     const customerId = params.customerId as string;
 
     const { data, updateData, customer, isLoadingCustomer } = useCounseling();
+
+    // 新規登録画面から渡されたお悩みを初期値として設定
+    useEffect(() => {
+        const concernsParam = searchParams.get('concerns');
+        if (concernsParam && data.concerns.length === 0) {
+            const initialConcerns = concernsParam.split(',').filter(Boolean);
+            if (initialConcerns.length > 0) {
+                updateData({ concerns: initialConcerns });
+            }
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
     const [stylists, setStylists] = useState<{ id: string; name: string }[]>([]);
 
     // New State for History

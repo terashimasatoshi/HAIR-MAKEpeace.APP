@@ -5,9 +5,27 @@ import { useRouter } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ChevronLeft, Loader2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { ChevronLeft, Loader2, AlertCircle } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/lib/supabase";
 import { ENABLE_LOCAL_FALLBACK } from "@/lib/runtime-flags";
+import { cn } from "@/lib/utils";
+
+const CONCERN_CATEGORIES = {
+    damage: {
+        label: "ダメージ系",
+        items: ["パサつき", "枝毛", "切れ毛", "ごわつき"]
+    },
+    scalp: {
+        label: "頭皮系",
+        items: ["かゆみ", "フケ", "乾燥", "べたつき"]
+    },
+    aging: {
+        label: "エイジング系",
+        items: ["うねり", "ハリ不足", "ツヤ不足", "白髪"]
+    }
+};
 
 export default function NewCustomerPage() {
     const router = useRouter();
@@ -15,6 +33,7 @@ export default function NewCustomerPage() {
     const [kana, setKana] = useState('');
     const [age, setAge] = useState('');
     const [phone, setPhone] = useState('');
+    const [concerns, setConcerns] = useState<string[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [kanaEdited, setKanaEdited] = useState(false);
@@ -39,6 +58,14 @@ export default function NewCustomerPage() {
         composingRef.current = '';
     }, [kanaEdited]);
 
+    const toggleConcern = (concern: string) => {
+        setConcerns(prev =>
+            prev.includes(concern)
+                ? prev.filter(c => c !== concern)
+                : [...prev, concern]
+        );
+    };
+
     const saveLocalCustomer = () => {
         const localId = `local-${Date.now()}`;
         const payload = {
@@ -53,6 +80,12 @@ export default function NewCustomerPage() {
         const existing = raw ? JSON.parse(raw) : [];
         localStorage.setItem('peace_local_customers', JSON.stringify([payload, ...existing]));
         return localId;
+    };
+
+    const buildNextUrl = (customerId: string) => {
+        const base = `/customers/${customerId}/counseling/input`;
+        if (concerns.length === 0) return base;
+        return `${base}?concerns=${encodeURIComponent(concerns.join(','))}`;
     };
 
     const handleSubmit = async () => {
@@ -79,10 +112,9 @@ export default function NewCustomerPage() {
             if (insertError) {
                 console.error('Insert error:', insertError);
                 if (ENABLE_LOCAL_FALLBACK) {
-                    // Dev fallback
                     const localId = saveLocalCustomer();
                     setError('Supabaseへ保存できないため、ローカル登録で続行します');
-                    router.push(`/customers/${localId}/counseling/input`);
+                    router.push(buildNextUrl(localId));
                 } else {
                     setError(`顧客の登録に失敗しました: ${insertError.message}`);
                 }
@@ -90,15 +122,14 @@ export default function NewCustomerPage() {
             }
 
             if (data) {
-                // 新規作成した顧客IDでカウンセリング画面に遷移
-                router.push(`/customers/${data.id}/counseling/input`);
+                router.push(buildNextUrl(data.id));
             }
         } catch (err) {
             console.error('Error:', err);
             if (ENABLE_LOCAL_FALLBACK) {
                 const localId = saveLocalCustomer();
                 setError('通信エラーのため、ローカル登録で続行します');
-                router.push(`/customers/${localId}/counseling/input`);
+                router.push(buildNextUrl(localId));
             } else {
                 setError('通信エラーで登録できませんでした');
             }
@@ -117,7 +148,8 @@ export default function NewCustomerPage() {
                 <div className="w-10"></div>
             </header>
 
-            <main className="max-w-md mx-auto p-4 space-y-6">
+            <main className="max-w-md mx-auto p-4 space-y-4">
+                {/* 基本情報 */}
                 <div className="bg-white rounded-xl p-6 shadow-sm border space-y-4">
                     <div className="space-y-2">
                         <Label htmlFor="name">名前 <span className="text-red-500">*</span></Label>
@@ -127,7 +159,6 @@ export default function NewCustomerPage() {
                             value={name}
                             onChange={(e) => {
                                 setName(e.target.value);
-                                // 名前を全消しした場合、カナもリセット
                                 if (!e.target.value.trim() && !kanaEdited) {
                                     setKana('');
                                 }
@@ -175,11 +206,50 @@ export default function NewCustomerPage() {
                             />
                         </div>
                     </div>
-
-                    {error && (
-                        <p className="text-red-500 text-sm">{error}</p>
-                    )}
                 </div>
+
+                {/* お悩み選択 */}
+                <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+                    <div className="px-4 py-3 flex items-center gap-2 border-b">
+                        <AlertCircle className="h-5 w-5 text-primary" />
+                        <span className="font-bold">お悩みを選択</span>
+                        {concerns.length > 0 && (
+                            <Badge className="bg-primary">{concerns.length}</Badge>
+                        )}
+                        <span className="text-xs text-muted-foreground ml-auto">任意</span>
+                    </div>
+                    <div className="p-4">
+                        <Tabs defaultValue="damage" className="w-full">
+                            <TabsList className="w-full grid grid-cols-3 mb-4">
+                                {Object.entries(CONCERN_CATEGORIES).map(([key, { label }]) => (
+                                    <TabsTrigger key={key} value={key}>{label}</TabsTrigger>
+                                ))}
+                            </TabsList>
+                            {Object.entries(CONCERN_CATEGORIES).map(([key, { items }]) => (
+                                <TabsContent key={key} value={key} className="flex flex-wrap gap-2 mt-0">
+                                    {items.map((concern) => (
+                                        <button
+                                            key={concern}
+                                            onClick={() => toggleConcern(concern)}
+                                            className={cn(
+                                                "px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 border",
+                                                concerns.includes(concern)
+                                                    ? "bg-primary text-white border-primary shadow-md transform scale-105"
+                                                    : "bg-secondary/5 text-foreground border-transparent hover:bg-secondary/10"
+                                            )}
+                                        >
+                                            {concern}
+                                        </button>
+                                    ))}
+                                </TabsContent>
+                            ))}
+                        </Tabs>
+                    </div>
+                </div>
+
+                {error && (
+                    <p className="text-red-500 text-sm">{error}</p>
+                )}
 
                 <Button
                     className="w-full h-12 text-lg bg-primary text-white"
