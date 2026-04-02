@@ -19,9 +19,11 @@ const MIN_BRIGHTNESS = 55;
 const MIN_FACE_WIDTH_RATIO = 0.12;
 /** 正面向き閾値: 鼻先が顔幅中点から何%ずれたら横向き判定 */
 const MAX_POSE_OFFSET = 0.10;
+/** フレーム間の鼻先移動量(正規化座標)がこれを超えるとブレ扱い */
+const MAX_MOTION_DELTA = 0.018;
 
 /** フレーム除外理由 */
-type RejectReason = "no_face" | "pose_tilt" | "low_light" | "small_face";
+type RejectReason = "no_face" | "pose_tilt" | "low_light" | "small_face" | "motion_blur";
 
 interface CameraProps {
   onCapture: (canvas: HTMLCanvasElement) => void;
@@ -176,8 +178,9 @@ export function Camera({ onCapture, onAggregatedResult }: CameraProps) {
     }[] = [];
 
     const rejectCounts: Record<RejectReason, number> = {
-      no_face: 0, pose_tilt: 0, low_light: 0, small_face: 0,
+      no_face: 0, pose_tilt: 0, low_light: 0, small_face: 0, motion_blur: 0,
     };
+    let prevNose: { x: number; y: number } | null = null;
 
     // 明るさ計測用の一時canvas
     const brightnessCanvas = document.createElement("canvas");
@@ -214,6 +217,19 @@ export function Camera({ onCapture, onAggregatedResult }: CameraProps) {
           rejectCounts.pose_tilt++;
           continue;
         }
+
+        // 品質ゲート1.5: フレーム間ブレ検出
+        if (prevNose) {
+          const dx = nose.x - prevNose.x;
+          const dy = nose.y - prevNose.y;
+          const motion = Math.sqrt(dx * dx + dy * dy);
+          if (motion > MAX_MOTION_DELTA) {
+            rejectCounts.motion_blur++;
+            prevNose = { x: nose.x, y: nose.y };
+            continue;
+          }
+        }
+        prevNose = { x: nose.x, y: nose.y };
 
         // 品質ゲート2: 顔サイズチェック（顔幅がフレーム幅に対して十分か）
         if (fw < MIN_FACE_WIDTH_RATIO) {
@@ -273,6 +289,7 @@ export function Camera({ onCapture, onAggregatedResult }: CameraProps) {
         pose_tilt: "顔が横を向いています。正面をまっすぐ向いて撮影してください。",
         low_light: "撮影が暗すぎます。明るい場所に移動してください。",
         small_face: "顔が小さすぎます。カメラにもう少し近づいてください。",
+        motion_blur: "顔が動いています。2秒ほど動かずに正面を向いてください。",
       };
 
       setError(topReason && topReason[1] > 0

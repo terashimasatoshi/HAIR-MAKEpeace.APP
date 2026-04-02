@@ -122,6 +122,14 @@ function draw(canvas: HTMLCanvasElement, faceDetected?: boolean, cssW?: number, 
     ctx.stroke();
   });
 
+  // 縦のガイドライン（顔の中心線）
+  const topY = cy - ellipseH + 8;
+  const bottomY = cy + ellipseH - 8;
+  ctx.beginPath();
+  ctx.moveTo(cx, topY);
+  ctx.lineTo(cx, bottomY);
+  ctx.stroke();
+
   // ガイドラインラベル
   ctx.setLineDash([]);
   ctx.font = "10px sans-serif";
