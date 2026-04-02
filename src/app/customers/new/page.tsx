@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, Loader2, AlertCircle } from "lucide-react";
+import { ChevronLeft, Loader2, AlertCircle, MessageSquare } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/lib/supabase";
 import { ENABLE_LOCAL_FALLBACK } from "@/lib/runtime-flags";
@@ -27,6 +27,34 @@ const CONCERN_CATEGORIES = {
     }
 };
 
+const QUESTIONNAIRE = [
+    {
+        id: 'hair_trouble',
+        question: '髪の悩み、一番近いのは？',
+        options: ['広がる・まとまらない', 'ぺたんこ・ボリューム出ない', 'ダメージ・パサつき', 'くせ毛がつらい', '特にない'],
+    },
+    {
+        id: 'styling_time',
+        question: '朝のスタイリング、どのくらい？',
+        options: ['5分以内で済ませたい', '10分くらいならOK', '時間かけてもいい', 'ドライヤーすらめんどい'],
+    },
+    {
+        id: 'salon_time',
+        question: '施術中、どう過ごしたい？',
+        options: ['静かに過ごしたい', '雑談したい', '髪の相談をしっかりしたい', 'スマホ見てたい'],
+    },
+    {
+        id: 'stylist_preference',
+        question: '美容師に求めるのは？',
+        options: ['技術がとにかく上手い人', '話しやすくて居心地がいい人', '提案力がある人', '自分の要望を正確に再現してくれる人'],
+    },
+    {
+        id: 'bad_experience',
+        question: '美容室で「これは嫌だった」に近いのは？',
+        options: ['勝手にスタイル変えられた', '話しかけられすぎた', '放置された', '仕上がりが思ってたのと違った', '特にない'],
+    },
+];
+
 export default function NewCustomerPage() {
     const router = useRouter();
     const [name, setName] = useState('');
@@ -34,6 +62,7 @@ export default function NewCustomerPage() {
     const [age, setAge] = useState('');
     const [phone, setPhone] = useState('');
     const [concerns, setConcerns] = useState<string[]>([]);
+    const [answers, setAnswers] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [kanaEdited, setKanaEdited] = useState(false);
@@ -54,7 +83,6 @@ export default function NewCustomerPage() {
     }, []);
 
     // IMEの変換前テキスト（ひらがな）を収集
-    // ブラウザによっては確定直前に漢字が入るので、ひらがなの場合のみ保存
     const handleCompositionUpdate = useCallback((e: React.CompositionEvent<HTMLInputElement>) => {
         const text = e.data || '';
         if (isHiragana(text)) {
@@ -76,6 +104,13 @@ export default function NewCustomerPage() {
                 ? prev.filter(c => c !== concern)
                 : [...prev, concern]
         );
+    };
+
+    const selectAnswer = (questionId: string, option: string) => {
+        setAnswers(prev => ({
+            ...prev,
+            [questionId]: prev[questionId] === option ? '' : option,
+        }));
     };
 
     const saveLocalCustomer = () => {
@@ -100,6 +135,13 @@ export default function NewCustomerPage() {
         return `${base}?concerns=${encodeURIComponent(concerns.join(','))}`;
     };
 
+    // アンケート回答をまとめる（空回答は除外）
+    const buildQuestionnaire = () => {
+        const filled = Object.entries(answers).filter(([, v]) => v);
+        if (filled.length === 0) return null;
+        return Object.fromEntries(filled);
+    };
+
     const handleSubmit = async () => {
         if (!name.trim()) {
             setError('名前は必須です');
@@ -110,6 +152,7 @@ export default function NewCustomerPage() {
         setError('');
 
         try {
+            const questionnaire = buildQuestionnaire();
             const { data, error: insertError } = await supabase
                 .from('customers')
                 .insert({
@@ -117,6 +160,7 @@ export default function NewCustomerPage() {
                     kana: kana.trim() || null,
                     age: age ? parseInt(age, 10) : null,
                     phone: phone.trim() || null,
+                    ...(questionnaire ? { questionnaire } : {}),
                 })
                 .select()
                 .single();
@@ -149,6 +193,8 @@ export default function NewCustomerPage() {
             setLoading(false);
         }
     };
+
+    const answeredCount = Object.values(answers).filter(Boolean).length;
 
     return (
         <div className="min-h-screen bg-background">
@@ -257,6 +303,41 @@ export default function NewCustomerPage() {
                                 </TabsContent>
                             ))}
                         </Tabs>
+                    </div>
+                </div>
+
+                {/* 顧客アンケート */}
+                <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+                    <div className="px-4 py-3 flex items-center gap-2 border-b">
+                        <MessageSquare className="h-5 w-5 text-primary" />
+                        <span className="font-bold">あなたのことを教えてください</span>
+                        {answeredCount > 0 && (
+                            <Badge className="bg-primary">{answeredCount}/{QUESTIONNAIRE.length}</Badge>
+                        )}
+                        <span className="text-xs text-muted-foreground ml-auto">任意</span>
+                    </div>
+                    <div className="p-4 space-y-5">
+                        {QUESTIONNAIRE.map((q) => (
+                            <div key={q.id} className="space-y-2">
+                                <p className="text-sm font-medium text-foreground">{q.question}</p>
+                                <div className="flex flex-wrap gap-2">
+                                    {q.options.map((option) => (
+                                        <button
+                                            key={option}
+                                            onClick={() => selectAnswer(q.id, option)}
+                                            className={cn(
+                                                "px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 border",
+                                                answers[q.id] === option
+                                                    ? "bg-primary text-white border-primary shadow-md transform scale-105"
+                                                    : "bg-secondary/5 text-foreground border-transparent hover:bg-secondary/10"
+                                            )}
+                                        >
+                                            {option}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
 
