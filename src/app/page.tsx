@@ -69,7 +69,7 @@ export default function Home() {
         return;
       }
 
-      const sessions: PendingSession[] = (data || [])
+      const filtered = (data || [])
         .filter((s) => {
           // AI診断済み & 未完了のみ
           if (s.ai_suggestion == null) return false;
@@ -90,6 +90,14 @@ export default function Home() {
             stylistName: (sty as { name: string } | null)?.name || null,
           };
         });
+
+      // 同じ顧客の重複セッションは最新のみ表示（created_at descでソート済み）
+      const seen = new Set<string>();
+      const sessions = filtered.filter((s) => {
+        if (seen.has(s.customerId)) return false;
+        seen.add(s.customerId);
+        return true;
+      });
 
       setPendingSessions(sessions);
     } catch (err) {
@@ -254,7 +262,7 @@ export default function Home() {
 
       {/* 5. Footer */}
       <footer className="fixed bottom-0 w-full p-4 pb-safe flex justify-between items-end pointer-events-none">
-        <span className="text-xs text-muted-foreground pl-2 pointer-events-auto">v1.7.0</span>
+        <span className="text-xs text-muted-foreground pl-2 pointer-events-auto">v1.8.0</span>
         <Link href="/settings/stylists" className="pointer-events-auto">
           <Button variant="ghost" size="icon" className="text-muted-foreground hover:bg-transparent hover:text-primary">
             <Settings size={20} />

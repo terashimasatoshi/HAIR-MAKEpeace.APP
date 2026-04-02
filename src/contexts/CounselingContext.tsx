@@ -329,6 +329,33 @@ export function CounselingProvider({ children, customerId }: { children: ReactNo
                 return { visitId: null, sessionId: null };
             }
 
+            // 既存セッションがある場合はUPDATE（2重作成防止）
+            if (counselingSessionId && visitId) {
+                const updatePayload = {
+                    gender: data.gender || 'female',
+                    concerns: data.concerns,
+                    damage_level: data.damageLevel,
+                    face_shape: data.faceShape || null,
+                    personal_color_base: data.personalColor?.base || null,
+                    personal_color_season: data.personalColor?.season || null,
+                    request: data.request || '',
+                    selected_menus: data.selectedMenus || [],
+                    ai_suggestion: aiSuggestion || null,
+                    stylist_id: data.stylistId || null,
+                };
+                const { error: updateError } = await supabase
+                    .from('counseling_sessions')
+                    .update(updatePayload)
+                    .eq('id', counselingSessionId);
+
+                if (updateError) {
+                    console.error('Session update error:', updateError);
+                    throw new Error(`Session update failed: ${updateError.message}`);
+                }
+                return { visitId, sessionId: counselingSessionId };
+            }
+
+            // 新規作成
             const { data: visit, error: visitError } = await supabase
                 .from('visits')
                 .insert({
@@ -345,7 +372,6 @@ export function CounselingProvider({ children, customerId }: { children: ReactNo
                 throw new Error(`Visit insert failed: ${visitError?.message || 'unknown'}`);
             }
 
-            // 1. Create Counseling Session
             const { data: session, error: sessionError } = await supabase
                 .from('counseling_sessions')
                 .insert({
