@@ -4,7 +4,7 @@ import { verifyApiSecret } from '@/lib/api-guard';
 
 // セッション作成
 export async function POST(request: Request) {
-  const authError = verifyApiSecret(request);
+  const authError = await verifyApiSecret(request);
   if (authError) return authError;
   try {
     const supabase = createServiceSupabaseClient();

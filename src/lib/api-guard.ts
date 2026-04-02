@@ -1,45 +1,53 @@
 import { NextResponse } from "next/server";
+import { verifyCsrfToken } from "./csrf";
 
 /**
- * APIルート保護: Same-Originリクエストの検証
+ * APIルート保護: Origin/Referer + CSRFトークンの二重検証
  *
  * 全てのAPIルートのハンドラ冒頭で呼び出す。
- * ブラウザからの正規リクエスト（Origin/Refererがアプリのホストと一致）のみ許可する。
+ * 1. Origin/Refererがアプリのホストと一致（ブラウザ同一オリジン）
+ * 2. x-csrf-token ヘッダーにサーバー発行のHMAC署名トークン
+ * 両方を満たすリクエストのみ許可する。
  *
  * 開発環境（NODE_ENV=development）ではスキップする。
  */
-export function verifyApiSecret(request: Request): NextResponse | null {
+export async function verifyApiSecret(request: Request): Promise<NextResponse | null> {
   // 開発環境ではスキップ
   if (process.env.NODE_ENV === "development") return null;
 
-  // Vercel システム変数 + カスタムドメインからホワイトリストを構築
-  // VERCEL_URL: デプロイ固有URL (xxx-abc123.vercel.app)
-  // VERCEL_PROJECT_PRODUCTION_URL: プロダクションURL (project.vercel.app)
-  // VERCEL_BRANCH_URL: ブランチURL (project-git-branch.vercel.app)
-  // NEXT_PUBLIC_APP_DOMAIN: カスタムドメイン (手動設定)
   const allowedHosts = buildAllowedHosts();
 
-  // fail-closed: ホワイトリストが空なら即401（設定漏れ事故防止）
+  // fail-closed: ホワイトリストが空なら即401
   if (allowedHosts.size === 0) {
     console.error("[API guard misconfigured] No allowed hosts configured — blocking all requests");
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // 1. Origin/Referer チェック
   const origin = request.headers.get("origin");
   const referer = request.headers.get("referer");
+  let originOk = false;
 
-  // origin or referer いずれかがホワイトリストと完全一致すれば許可
   if (origin) {
     const host = safeHostname(origin);
-    if (host && allowedHosts.has(host)) return null;
+    if (host && allowedHosts.has(host)) originOk = true;
   }
-
-  if (referer) {
+  if (!originOk && referer) {
     const host = safeHostname(referer);
-    if (host && allowedHosts.has(host)) return null;
+    if (host && allowedHosts.has(host)) originOk = true;
   }
 
-  return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!originOk) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // 2. CSRFトークン検証
+  const csrfToken = request.headers.get("x-csrf-token") || "";
+  if (!csrfToken || !(await verifyCsrfToken(csrfToken))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  return null;
 }
 
 function buildAllowedHosts(): Set<string> {

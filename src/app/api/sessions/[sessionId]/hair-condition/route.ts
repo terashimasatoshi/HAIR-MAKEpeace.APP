@@ -7,7 +7,7 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ sessionId: string }> }
 ) {
-  const authError = verifyApiSecret(request);
+  const authError = await verifyApiSecret(request);
   if (authError) return authError;
   try {
     const { sessionId } = await params;
@@ -93,7 +93,7 @@ export async function GET(
   request: Request,
   { params }: { params: Promise<{ sessionId: string }> }
 ) {
-  const authErr = verifyApiSecret(request);
+  const authErr = await verifyApiSecret(request);
   if (authErr) return authErr;
   try {
     const { sessionId } = await params;

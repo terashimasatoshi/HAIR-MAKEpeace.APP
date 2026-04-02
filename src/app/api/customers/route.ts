@@ -4,7 +4,7 @@ import { verifyApiSecret } from '@/lib/api-guard';
 
 // 顧客一覧取得
 export async function GET(request: Request) {
-  const authError = verifyApiSecret(request);
+  const authError = await verifyApiSecret(request);
   if (authError) return authError;
   try {
     const supabase = createServiceSupabaseClient();
@@ -50,7 +50,7 @@ export async function GET(request: Request) {
 
 // 新規顧客作成
 export async function POST(request: Request) {
-  const authError = verifyApiSecret(request);
+  const authError = await verifyApiSecret(request);
   if (authError) return authError;
   try {
     const supabase = createServiceSupabaseClient();

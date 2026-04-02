@@ -6,7 +6,7 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ sessionId: string }> }
 ) {
-  const authError = verifyApiSecret(request);
+  const authError = await verifyApiSecret(request);
   if (authError) return authError;
   try {
     const supabase = createServiceSupabaseClient();

@@ -4,7 +4,7 @@ import { MATCHING_KNOWLEDGE } from '@/lib/knowledge';
 import { verifyApiSecret, checkRateLimit } from '@/lib/api-guard';
 
 export async function POST(request: Request) {
-  const authError = verifyApiSecret(request);
+  const authError = await verifyApiSecret(request);
   if (authError) return authError;
   const rateLimitError = checkRateLimit(request);
   if (rateLimitError) return rateLimitError;
