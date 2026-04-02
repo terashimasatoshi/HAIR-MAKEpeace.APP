@@ -125,7 +125,7 @@ export default function AiProposalPage() {
     const router = useRouter();
     const params = useParams();
     const customerId = params.customerId as string;
-    const { data, saveToSupabase, customer, stylist, isLoadingCustomer } = useCounseling();
+    const { data, updateData, saveToSupabase, customer, stylist, isLoadingCustomer } = useCounseling();
     const [selectedColor, setSelectedColor] = useState<any>(null);
     const [proposal, setProposal] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -137,6 +137,14 @@ export default function AiProposalPage() {
     const [sheetError, setSheetError] = useState<string | null>(null);
 
     useEffect(() => {
+        // data.aiPlan にキャッシュがあれば再利用（戻り操作でのAPI再呼び出し防止）
+        if (data.aiPlan) {
+            console.log("[PlanPage] Using cached AI plan from context");
+            setProposal(data.aiPlan);
+            setIsLoading(false);
+            return;
+        }
+
         const fetchSuggestion = async () => {
             setIsLoading(true);
             try {
@@ -144,7 +152,6 @@ export default function AiProposalPage() {
                 const effectivePersonalSeason = data.personalColor?.season || "";
                 const effectivePersonalBase = data.personalColor?.base || "";
 
-                // Map Data ID to Label for better AI understanding
                 const FACE_SHAPE_MAP: Record<string, string> = {
                     "egg": "卵型",
                     "round": "丸型",
@@ -176,11 +183,12 @@ export default function AiProposalPage() {
                 const result = await res.json();
                 console.log("[PlanPage] Received from API:", result);
                 setProposal(result);
+                // AI提案をcontextにキャッシュ（sessionStorage経由で永続化）
+                updateData({ aiPlan: result });
             } catch (err) {
                 console.error("[PlanPage] Error fetching AI", err);
                 setError("AIの提案を取得できませんでした。デモデータ（顔型反映版）を表示します。");
 
-                // Fallback to dynamic mock data
                 const FACE_SHAPE_MAP: Record<string, string> = {
                     "egg": "卵型",
                     "round": "丸型",
@@ -197,7 +205,8 @@ export default function AiProposalPage() {
         };
 
         fetchSuggestion();
-    }, [data]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     if (isLoading) {
         return (
