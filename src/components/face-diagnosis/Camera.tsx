@@ -10,9 +10,9 @@ import type { FaceLandmarker } from "@mediapipe/tasks-vision";
 import type { FaceMeasurements, FaceScores, FaceType } from "@/types/face";
 
 /** 集約に使うフレーム数 */
-const AGGREGATE_FRAMES = 12;
+const AGGREGATE_FRAMES = 24;
 /** フレーム取得間隔（ms） */
-const FRAME_INTERVAL = 150;
+const FRAME_INTERVAL = 120;
 /** 明るさ閾値: 顔領域の平均輝度(0-255)がこれ未満→暗すぎ */
 const MIN_BRIGHTNESS = 55;
 /** 顔サイズ閾値: 顔幅(正規化0〜1)がこの値未満→顔が小さすぎ */
@@ -303,45 +303,44 @@ export function Camera({ onCapture, onAggregatedResult }: CameraProps) {
       streamRef.current = null;
     }
 
-    // 集約: 多数決 + 平均スコア
-    const typeCounts: Record<FaceType, number> = { round: 0, oval: 0, long: 0, base: 0 };
-    const avgScores: Record<FaceType, number> = { round: 0, oval: 0, long: 0, base: 0 };
-    let totalConfidence = 0;
-
-    for (const fr of frameResults) {
-      typeCounts[fr.faceType]++;
-      for (const t of ["round", "oval", "long", "base"] as FaceType[]) {
-        avgScores[t] += fr.scores[t];
-      }
-      totalConfidence += fr.confidence;
-    }
-
+    // 集約: confidence重み付きで特徴量を平均し、1回だけ分類
+    // （旧方式: フレームごと分類→多数決 → ランドマークノイズに弱い）
+    // （新方式: 特徴量平均→1回分類 → ノイズが√N倍削減される）
     const n = frameResults.length;
-    for (const t of ["round", "oval", "long", "base"] as FaceType[]) {
-      avgScores[t] = Math.round(avgScores[t] / n);
-    }
 
-    // 多数決で最終顔型
-    let finalType: FaceType = "oval";
-    let maxCount = 0;
-    for (const t of ["round", "oval", "long", "base"] as FaceType[]) {
-      if (typeCounts[t] > maxCount) {
-        maxCount = typeCounts[t];
-        finalType = t;
+    // confidence下位25%を除外（低品質フレーム排除）
+    const sorted = [...frameResults].sort((a, b) => b.confidence - a.confidence);
+    const cutoff = Math.max(1, Math.floor(n * 0.75));
+    const topFrames = sorted.slice(0, cutoff);
+
+    // confidence重み付き平均で特徴量を集約
+    const measurementKeys: (keyof FaceMeasurements)[] = [
+      "widthRatio", "jawRatio", "chinAngle", "foreheadRatio",
+      "cheekboneRatio", "verticalBalance", "faceLength", "faceWidth",
+      "jawWidth", "foreheadWidth", "cheekboneWidth",
+    ];
+    let totalWeight = 0;
+    const weightedSums: Record<string, number> = {};
+    for (const key of measurementKeys) weightedSums[key] = 0;
+
+    for (const fr of topFrames) {
+      const w = Math.max(1, fr.confidence); // confidence=0でも最低重み1
+      totalWeight += w;
+      for (const key of measurementKeys) {
+        weightedSums[key] += fr.measurements[key] * w;
       }
     }
 
-    // 平均信頼度
-    const avgConfidence = Math.round(totalConfidence / n);
-
-    // 合計100%に補正
-    const totalAvg = avgScores.round + avgScores.oval + avgScores.long + avgScores.base;
-    if (totalAvg !== 100) {
-      avgScores[finalType] += 100 - totalAvg;
+    const avgMeasurements = {} as Record<string, number>;
+    for (const key of measurementKeys) {
+      avgMeasurements[key] = weightedSums[key] / totalWeight;
     }
 
-    // 最後のフレームのlandmarksとmeasurementsを代表値として使用
-    const lastFrame = frameResults[frameResults.length - 1];
+    // 平均特徴量で1回だけ分類
+    const { scores: finalScores, faceType: finalType, confidence: finalConfidence } = calculateScores(avgMeasurements as unknown as FaceMeasurements);
+
+    // 最もconfidenceが高いフレームのlandmarksを代表値として使用
+    const bestFrame = sorted[0];
 
     // 画像データURLを生成
     const imageDataUrl = canvas.toDataURL("image/jpeg", 0.9);
@@ -350,10 +349,10 @@ export function Camera({ onCapture, onAggregatedResult }: CameraProps) {
       // 集約モード: 画像を含めて一括で渡す（onCaptureは呼ばない）
       onAggregatedResult({
         faceType: finalType,
-        scores: avgScores as FaceScores,
-        confidence: avgConfidence,
-        measurements: lastFrame.measurements,
-        landmarks: lastFrame.landmarks,
+        scores: finalScores,
+        confidence: finalConfidence,
+        measurements: avgMeasurements as unknown as FaceMeasurements,
+        landmarks: bestFrame.landmarks,
         validFrames: n,
         rejectCounts,
         imageDataUrl,
@@ -427,6 +426,9 @@ export function Camera({ onCapture, onAggregatedResult }: CameraProps) {
             <p className="text-white text-sm font-bold">
               解析中... {captureProgress}%
             </p>
+            <p className="text-white/80 text-xs">
+              動かないでください
+            </p>
           </div>
         )}
       </div>
@@ -452,9 +454,10 @@ export function Camera({ onCapture, onAggregatedResult }: CameraProps) {
           </p>
         )}
         {!isCapturing && landmarkerReady && !error && (
-          <p className="text-xs text-muted-foreground/70">
-            明るい場所で、前髪は分けて額を出すと精度が上がります
-          </p>
+          <div className="text-xs text-muted-foreground/70 space-y-0.5">
+            <p>精度を上げるコツ：</p>
+            <p>・前髪を上げて額を出す ・明るい場所 ・正面を向く ・無表情</p>
+          </div>
         )}
       </div>
 

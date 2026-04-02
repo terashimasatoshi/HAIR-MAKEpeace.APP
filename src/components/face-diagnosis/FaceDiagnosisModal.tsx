@@ -100,12 +100,22 @@ export function FaceDiagnosisModal({
     }
   }, []);
 
-  const handleApplyResult = useCallback(() => {
-    if (!result) return;
-    const counselingId = FACE_TYPE_TO_COUNSELING_ID[result.faceType];
+  const handleApplyResult = useCallback((overrideType?: FaceType) => {
+    const type = overrideType || result?.faceType;
+    if (!type) return;
+    const counselingId = FACE_TYPE_TO_COUNSELING_ID[type];
     onResult(counselingId);
     onOpenChange(false);
   }, [result, onResult, onOpenChange]);
+
+  // 低信頼時の上位2候補を取得
+  const getTopTwoCandidates = useCallback((): [FaceType, FaceType] | null => {
+    if (!result) return null;
+    const entries = (Object.entries(result.scores) as [FaceType, number][])
+      .sort((a, b) => b[1] - a[1]);
+    if (entries.length < 2) return null;
+    return [entries[0][0], entries[1][0]];
+  }, [result]);
 
   const handleRetry = useCallback(() => {
     setResult(null);
@@ -203,46 +213,49 @@ export function FaceDiagnosisModal({
               )}
             </div>
 
-            {/* 信頼度が低い場合: 判定保留 */}
-            {isLowConfidence && (
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm">
-                <p className="font-bold text-amber-700 mb-1">
-                  判定保留 — 再撮影をお願いします
-                </p>
-                <p className="text-amber-600 text-xs leading-relaxed">
-                  上位の顔型が僅差のため、確定できませんでした。
-                  {rejectCounts.low_light > 0 && "暗さが影響している可能性があります。"}
-                  {rejectCounts.pose_tilt > 0 && "顔の傾きが影響している可能性があります。"}
-                  {rejectCounts.small_face > 0 && "顔が小さく映っている可能性があります。"}
-                  下記を改善して撮り直してください：
-                </p>
-                <ul className="text-amber-600 text-xs mt-1 space-y-0.5 list-disc list-inside">
-                  {rejectCounts.low_light > 0 && <li>明るい場所で撮影する</li>}
-                  {rejectCounts.pose_tilt > 0 && <li>正面をまっすぐ向く</li>}
-                  {rejectCounts.small_face > 0 && <li>カメラにもう少し近づく</li>}
-                  <li>前髪を分けて額を出す</li>
-                  <li>顔全体がガイド枠に収まるようにする</li>
-                </ul>
-              </div>
-            )}
+            {/* 信頼度が低い場合: 候補2つ提示 + 手動選択 */}
+            {isLowConfidence && (() => {
+              const candidates = getTopTwoCandidates();
+              return (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm">
+                  <p className="font-bold text-amber-700 mb-1">
+                    判定が分かれています
+                  </p>
+                  <p className="text-amber-600 text-xs leading-relaxed mb-3">
+                    自動判定では確定が難しいため、お客様の顔型に近い方をお選びください。
+                  </p>
+                  {candidates && (
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        className="flex-1 border-amber-300 hover:bg-amber-100"
+                        onClick={() => handleApplyResult(candidates[0])}
+                      >
+                        {FACE_TYPE_LABELS[candidates[0]]}（{result?.scores[candidates[0]]}%）
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="flex-1 border-amber-300 hover:bg-amber-100"
+                        onClick={() => handleApplyResult(candidates[1])}
+                      >
+                        {FACE_TYPE_LABELS[candidates[1]]}（{result?.scores[candidates[1]]}%）
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             <ResultChart scores={result.scores} faceType={result.faceType} />
 
             <div className="flex gap-3 pt-2">
-              {isLowConfidence ? (
-                /* 判定保留: 再撮影のみ。onResultを呼ばない */
-                <Button onClick={handleRetry} className="flex-1">
-                  撮り直す
+              <Button variant="outline" onClick={handleRetry} className="flex-1">
+                撮り直す
+              </Button>
+              {!isLowConfidence && (
+                <Button onClick={() => handleApplyResult()} className="flex-1">
+                  この結果を使う
                 </Button>
-              ) : (
-                <>
-                  <Button variant="outline" onClick={handleRetry} className="flex-1">
-                    撮り直す
-                  </Button>
-                  <Button onClick={handleApplyResult} className="flex-1">
-                    この結果を使う
-                  </Button>
-                </>
               )}
             </div>
           </div>
