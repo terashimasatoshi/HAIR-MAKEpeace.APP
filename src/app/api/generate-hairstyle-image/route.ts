@@ -89,12 +89,12 @@ export async function POST(request: Request) {
 }
 
 function buildPrompt(data: GenerateImageRequest): string {
-  const stylesText = data.styles
+  const stylesText = (data.styles || [])
     .slice(0, 3)
     .map((s, i) => `${i + 1}. ${s.title}`)
     .join('\n');
 
-  const colorsText = data.colors
+  const colorsText = (data.colors || [])
     .slice(0, 3)
     .map((c) => `・${c.name}（${c.code}）`)
     .join('\n');
