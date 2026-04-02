@@ -43,7 +43,12 @@ export default function Home() {
   // 未完了セッション（今日のAI診断済み＋施術記録未完了）を取得
   const fetchPending = useCallback(async () => {
     try {
-      const today = new Date().toISOString().split('T')[0];
+      // 今日の0時（ローカルタイムゾーン）をUTC ISO文字列に変換
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const todayISO = todayStart.toISOString();
+
+      // statusフィルタはJS側で行う（.or()構文のPostgREST互換性問題を回避）
       const { data, error } = await supabase
         .from('counseling_sessions')
         .select(`
@@ -56,8 +61,7 @@ export default function Home() {
           customer:customer_id(name),
           stylist:stylist_id(name)
         `)
-        .or('status.is.null,status.neq.completed')
-        .gte('created_at', `${today}T00:00:00`)
+        .gte('created_at', todayISO)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -66,7 +70,12 @@ export default function Home() {
       }
 
       const sessions: PendingSession[] = (data || [])
-        .filter((s) => s.ai_suggestion != null) // AI診断済みのみ
+        .filter((s) => {
+          // AI診断済み & 未完了のみ
+          if (s.ai_suggestion == null) return false;
+          const status = (s as Record<string, unknown>).status as string | null;
+          return status !== 'completed';
+        })
         .map((s) => {
           const rawCustomer = s.customer as unknown;
           const cust = Array.isArray(rawCustomer) ? rawCustomer[0] : rawCustomer;
@@ -245,7 +254,7 @@ export default function Home() {
 
       {/* 5. Footer */}
       <footer className="fixed bottom-0 w-full p-4 pb-safe flex justify-between items-end pointer-events-none">
-        <span className="text-xs text-muted-foreground pl-2 pointer-events-auto">v1.6.0</span>
+        <span className="text-xs text-muted-foreground pl-2 pointer-events-auto">v1.7.0</span>
         <Link href="/settings/stylists" className="pointer-events-auto">
           <Button variant="ghost" size="icon" className="text-muted-foreground hover:bg-transparent hover:text-primary">
             <Settings size={20} />
