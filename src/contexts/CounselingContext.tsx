@@ -120,10 +120,17 @@ export function CounselingProvider({ children, customerId }: { children: ReactNo
     const [stylist, setStylist] = useState<{ id: string; name: string } | null>(null);
     const [isLoadingCustomer, setIsLoadingCustomer] = useState(false);
 
-    // Initialize with global stylist if available
-    const [data, setData] = useState<CounselingData>({
-        ...initialData,
-        stylistId: currentStylist?.id || null
+    // Initialize with global stylist if available, restore from sessionStorage if exists
+    const [data, setData] = useState<CounselingData>(() => {
+        if (typeof window !== 'undefined' && customerId) {
+            const saved = sessionStorage.getItem(`peace_counseling_${customerId}`);
+            if (saved) {
+                try {
+                    return { ...initialData, ...JSON.parse(saved) };
+                } catch { /* ignore */ }
+            }
+        }
+        return { ...initialData, stylistId: currentStylist?.id || null };
     });
 
     // Update local stylistId if global changes (optional, but keep in sync initially)
@@ -187,7 +194,16 @@ export function CounselingProvider({ children, customerId }: { children: ReactNo
     }, [data.stylistId]);
 
     const updateData = (updates: Partial<CounselingData>) => {
-        setData(prev => ({ ...prev, ...updates }));
+        setData(prev => {
+            const next = { ...prev, ...updates };
+            // sessionStorageに永続化（ページ遷移してもデータを保持）
+            if (typeof window !== 'undefined' && customerId) {
+                try {
+                    sessionStorage.setItem(`peace_counseling_${customerId}`, JSON.stringify(next));
+                } catch { /* storage full — ignore */ }
+            }
+            return next;
+        });
     };
 
     const updateSectionData = (section: 'root' | 'middle' | 'ends', field: string, value: string | number) => {
@@ -207,6 +223,9 @@ export function CounselingProvider({ children, customerId }: { children: ReactNo
         setData(initialData);
         setCustomer(null);
         setRestoredSessionId(null);
+        if (typeof window !== 'undefined' && customerId) {
+            sessionStorage.removeItem(`peace_counseling_${customerId}`);
+        }
     };
 
     const [visitId, setVisitId] = useState<string | null>(null);
@@ -460,6 +479,11 @@ export function CounselingProvider({ children, customerId }: { children: ReactNo
                 .from('counseling_sessions')
                 .update({ status: 'completed' })
                 .eq('visit_id', currentVisitId);
+        }
+
+        // 完了後にsessionStorageをクリア
+        if (typeof window !== 'undefined' && custId) {
+            sessionStorage.removeItem(`peace_counseling_${custId}`);
         }
 
         return true;
