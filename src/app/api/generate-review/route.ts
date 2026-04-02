@@ -45,13 +45,13 @@ ${body.hitokoto}
 ${body.storeName}
 
 【今日の施術内容】
-${body.menuNames.length > 0 ? body.menuNames.join('、') : '髪質改善トリートメント'}
+${Array.isArray(body.menuNames) && body.menuNames.length > 0 ? body.menuNames.join('、') : '髪質改善トリートメント'}
 
 【担当スタイリスト】
 ${body.stylistName || '指定なし'}
 
 【来店前の悩み】
-${body.concerns.length > 0 ? body.concerns.join('、') : '特になし'}
+${Array.isArray(body.concerns) && body.concerns.length > 0 ? body.concerns.join('、') : '特になし'}
 
 以下のルールで口コミを生成してください：
 - お客様本人が書いたような自然な文体（丁寧語でもカジュアルでもOK）
