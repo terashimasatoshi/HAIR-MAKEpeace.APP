@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -41,60 +41,72 @@ export default function Home() {
   }, []);
 
   // 未完了セッション（今日のAI診断済み＋施術記録未完了）を取得
-  useEffect(() => {
-    const fetchPending = async () => {
-      try {
-        const today = new Date().toISOString().split('T')[0];
-        const { data, error } = await supabase
-          .from('counseling_sessions')
-          .select(`
-            id,
-            customer_id,
-            selected_menus,
-            created_at,
-            status,
-            ai_suggestion,
-            customer:customer_id(name),
-            stylist:stylist_id(name)
-          `)
-          .or('status.is.null,status.neq.completed')
-          .gte('created_at', `${today}T00:00:00`)
-          .order('created_at', { ascending: false });
+  const fetchPending = useCallback(async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const { data, error } = await supabase
+        .from('counseling_sessions')
+        .select(`
+          id,
+          customer_id,
+          selected_menus,
+          created_at,
+          status,
+          ai_suggestion,
+          customer:customer_id(name),
+          stylist:stylist_id(name)
+        `)
+        .or('status.is.null,status.neq.completed')
+        .gte('created_at', `${today}T00:00:00`)
+        .order('created_at', { ascending: false });
 
-        console.log('[Home] Pending sessions query result:', { count: data?.length, error, raw: data });
-
-        if (error) {
-          console.error('Pending sessions error:', error);
-          return;
-        }
-
-        const sessions: PendingSession[] = (data || [])
-          .filter((s) => s.ai_suggestion != null) // AI診断済みのみ
-          .map((s) => {
-            const rawCustomer = s.customer as unknown;
-            const cust = Array.isArray(rawCustomer) ? rawCustomer[0] : rawCustomer;
-            const rawStylist = s.stylist as unknown;
-            const sty = Array.isArray(rawStylist) ? rawStylist[0] : rawStylist;
-            return {
-              id: s.id,
-              customerId: s.customer_id,
-              customerName: (cust as { name: string } | null)?.name || '不明',
-              selectedMenus: (s.selected_menus as string[]) || [],
-              createdAt: s.created_at,
-              stylistName: (sty as { name: string } | null)?.name || null,
-            };
-          });
-
-        setPendingSessions(sessions);
-      } catch (err) {
-        console.error('Failed to fetch pending sessions:', err);
-      } finally {
-        setLoadingPending(false);
+      if (error) {
+        console.error('Pending sessions error:', error);
+        return;
       }
-    };
 
-    fetchPending();
+      const sessions: PendingSession[] = (data || [])
+        .filter((s) => s.ai_suggestion != null) // AI診断済みのみ
+        .map((s) => {
+          const rawCustomer = s.customer as unknown;
+          const cust = Array.isArray(rawCustomer) ? rawCustomer[0] : rawCustomer;
+          const rawStylist = s.stylist as unknown;
+          const sty = Array.isArray(rawStylist) ? rawStylist[0] : rawStylist;
+          return {
+            id: s.id,
+            customerId: s.customer_id,
+            customerName: (cust as { name: string } | null)?.name || '不明',
+            selectedMenus: (s.selected_menus as string[]) || [],
+            createdAt: s.created_at,
+            stylistName: (sty as { name: string } | null)?.name || null,
+          };
+        });
+
+      setPendingSessions(sessions);
+    } catch (err) {
+      console.error('Failed to fetch pending sessions:', err);
+    } finally {
+      setLoadingPending(false);
+    }
   }, []);
+
+  // 初回 + ページに戻った時に再取得
+  useEffect(() => {
+    fetchPending();
+
+    // ソフトナビゲーションで戻った場合に再取得
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') fetchPending();
+    };
+    const handleFocus = () => fetchPending();
+
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('focus', handleFocus);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [fetchPending]);
 
   return (
     <div className="min-h-screen bg-background text-foreground font-sans">
@@ -233,7 +245,7 @@ export default function Home() {
 
       {/* 5. Footer */}
       <footer className="fixed bottom-0 w-full p-4 pb-safe flex justify-between items-end pointer-events-none">
-        <span className="text-xs text-muted-foreground pl-2 pointer-events-auto">v1.5.0</span>
+        <span className="text-xs text-muted-foreground pl-2 pointer-events-auto">v1.6.0</span>
         <Link href="/settings/stylists" className="pointer-events-auto">
           <Button variant="ghost" size="icon" className="text-muted-foreground hover:bg-transparent hover:text-primary">
             <Settings size={20} />
