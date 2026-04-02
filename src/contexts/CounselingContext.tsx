@@ -443,10 +443,25 @@ export function CounselingProvider({ children, customerId }: { children: ReactNo
                     console.error("Update failed:", updateError);
                     return false;
                 }
-                return true;
+            } else {
+                return false;
             }
-            return false;
         }
+
+        // セッションを完了に更新
+        if (counselingSessionId) {
+            await supabase
+                .from('counseling_sessions')
+                .update({ status: 'completed' })
+                .eq('id', counselingSessionId);
+        } else if (currentVisitId) {
+            // counselingSessionIdがない場合、visit_idから検索して更新
+            await supabase
+                .from('counseling_sessions')
+                .update({ status: 'completed' })
+                .eq('visit_id', currentVisitId);
+        }
+
         return true;
     };
 
