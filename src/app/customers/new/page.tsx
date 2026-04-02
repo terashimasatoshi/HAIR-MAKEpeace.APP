@@ -62,7 +62,7 @@ export default function NewCustomerPage() {
     const [age, setAge] = useState('');
     const [phone, setPhone] = useState('');
     const [concerns, setConcerns] = useState<string[]>([]);
-    const [answers, setAnswers] = useState<Record<string, string>>({});
+    const [answers, setAnswers] = useState<Record<string, string[]>>({});
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [kanaEdited, setKanaEdited] = useState(false);
@@ -106,11 +106,14 @@ export default function NewCustomerPage() {
         );
     };
 
-    const selectAnswer = (questionId: string, option: string) => {
-        setAnswers(prev => ({
-            ...prev,
-            [questionId]: prev[questionId] === option ? '' : option,
-        }));
+    const toggleAnswer = (questionId: string, option: string) => {
+        setAnswers(prev => {
+            const current = prev[questionId] || [];
+            const next = current.includes(option)
+                ? current.filter(o => o !== option)
+                : [...current, option];
+            return { ...prev, [questionId]: next };
+        });
     };
 
     const saveLocalCustomer = () => {
@@ -137,7 +140,7 @@ export default function NewCustomerPage() {
 
     // アンケート回答をまとめる（空回答は除外）
     const buildQuestionnaire = () => {
-        const filled = Object.entries(answers).filter(([, v]) => v);
+        const filled = Object.entries(answers).filter(([, v]) => v.length > 0);
         if (filled.length === 0) return null;
         return Object.fromEntries(filled);
     };
@@ -194,7 +197,7 @@ export default function NewCustomerPage() {
         }
     };
 
-    const answeredCount = Object.values(answers).filter(Boolean).length;
+    const answeredCount = Object.values(answers).filter(v => v.length > 0).length;
 
     return (
         <div className="min-h-screen bg-background">
@@ -324,10 +327,10 @@ export default function NewCustomerPage() {
                                     {q.options.map((option) => (
                                         <button
                                             key={option}
-                                            onClick={() => selectAnswer(q.id, option)}
+                                            onClick={() => toggleAnswer(q.id, option)}
                                             className={cn(
                                                 "px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 border",
-                                                answers[q.id] === option
+                                                (answers[q.id] || []).includes(option)
                                                     ? "bg-primary text-white border-primary shadow-md transform scale-105"
                                                     : "bg-secondary/5 text-foreground border-transparent hover:bg-secondary/10"
                                             )}

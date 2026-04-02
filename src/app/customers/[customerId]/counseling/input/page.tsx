@@ -22,7 +22,14 @@ import { ENABLE_LOCAL_FALLBACK } from "@/lib/runtime-flags";
 import { FaceDiagnosisModal } from "@/components/face-diagnosis/FaceDiagnosisModal";
 import { Camera } from "lucide-react";
 
-// Mock Data
+const QUESTIONNAIRE_LABELS = [
+    { id: 'hair_trouble', label: '髪の悩み' },
+    { id: 'styling_time', label: 'スタイリング時間' },
+    { id: 'salon_time', label: '施術中の過ごし方' },
+    { id: 'stylist_preference', label: '美容師に求めること' },
+    { id: 'bad_experience', label: '過去の不満' },
+];
+
 const CONCERN_CATEGORIES = {
     damage: {
         label: "ダメージ系",
@@ -103,7 +110,24 @@ export default function CounselingInputPage() {
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    // 顧客のアンケート回答を取得
+    useEffect(() => {
+        if (!customerId || customerId.startsWith('local-')) return;
+        (async () => {
+            const { data: cust } = await supabase
+                .from('customers')
+                .select('questionnaire')
+                .eq('id', customerId)
+                .single();
+            if (cust?.questionnaire) {
+                setQuestionnaire(cust.questionnaire as Record<string, string[]>);
+            }
+        })();
+    }, [customerId]);
+
     const [stylists, setStylists] = useState<{ id: string; name: string }[]>([]);
+    const [questionnaire, setQuestionnaire] = useState<Record<string, string[]> | null>(null);
 
     // New State for History
     const [visitCount, setVisitCount] = useState<number | null>(null);
@@ -707,6 +731,29 @@ export default function CounselingInputPage() {
                         ))}
                     </div>
                 </div>
+
+                {/* 3.5 Customer Questionnaire (from registration) */}
+                {questionnaire && Object.keys(questionnaire).length > 0 && (
+                    <div className="bg-amber-50 rounded-xl shadow-sm border border-amber-200 overflow-hidden mb-4">
+                        <div className="px-4 py-3 flex items-center gap-2 border-b border-amber-200">
+                            <Info className="h-4 w-4 text-amber-600" />
+                            <span className="font-bold text-sm text-amber-800">お客様の事前アンケート</span>
+                        </div>
+                        <div className="p-4 space-y-2">
+                            {QUESTIONNAIRE_LABELS.map(({ id, label }) => {
+                                const vals = questionnaire[id];
+                                if (!vals || (Array.isArray(vals) ? vals.length === 0 : !vals)) return null;
+                                const display = Array.isArray(vals) ? vals.join('、') : vals;
+                                return (
+                                    <div key={id} className="flex gap-2 text-sm">
+                                        <span className="text-amber-700 font-medium shrink-0">{label}:</span>
+                                        <span className="text-foreground">{display}</span>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
 
                 {/* 4. Concerns */}
                 <Accordion type="single" collapsible defaultValue="concerns" className="w-full">
