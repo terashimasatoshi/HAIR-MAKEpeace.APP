@@ -354,7 +354,9 @@ export function CounselingProvider({ children, customerId }: { children: ReactNo
     // ... existing saveToSupabase ...
     const saveToSupabase = async (custId: string, aiSuggestion?: object): Promise<{ visitId: string | null; sessionId: string | null }> => {
         // ダブルタップによる重複作成防止
-        if (isSavingRef.current) return { visitId, sessionId: counselingSessionId };
+        if (isSavingRef.current) {
+            throw new Error('Save already in progress');
+        }
         isSavingRef.current = true;
         try {
             // Always persist diagnosis cache for flow branching (even if Supabase fails)

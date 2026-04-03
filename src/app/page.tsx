@@ -12,7 +12,6 @@ import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import { useStylist } from '@/contexts/StylistContext';
-import { supabase } from '@/lib/supabase';
 
 interface PendingSession {
   id: string;
@@ -43,62 +42,13 @@ export default function Home() {
   // 未完了セッション（今日のAI診断済み＋施術記録未完了）を取得
   const fetchPending = useCallback(async () => {
     try {
-      // 今日の0時（ローカルタイムゾーン）をUTC ISO文字列に変換
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
-      const todayISO = todayStart.toISOString();
-
-      // statusフィルタはJS側で行う（.or()構文のPostgREST互換性問題を回避）
-      const { data, error } = await supabase
-        .from('counseling_sessions')
-        .select(`
-          id,
-          customer_id,
-          selected_menus,
-          created_at,
-          status,
-          ai_suggestion,
-          customer:customer_id(name),
-          stylist:stylist_id(name)
-        `)
-        .gte('created_at', todayISO)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Pending sessions error:', error);
+      // Service Role経由で確実に取得（anon clientのRLS/接続問題を回避）
+      const res = await fetch('/api/pending-sessions');
+      if (!res.ok) {
+        console.error('Pending sessions API error:', res.status);
         return;
       }
-
-      const filtered = (data || [])
-        .filter((s) => {
-          // AI診断済み & 未完了のみ
-          if (s.ai_suggestion == null) return false;
-          const status = (s as Record<string, unknown>).status as string | null;
-          return status !== 'completed';
-        })
-        .map((s) => {
-          const rawCustomer = s.customer as unknown;
-          const cust = Array.isArray(rawCustomer) ? rawCustomer[0] : rawCustomer;
-          const rawStylist = s.stylist as unknown;
-          const sty = Array.isArray(rawStylist) ? rawStylist[0] : rawStylist;
-          return {
-            id: s.id,
-            customerId: s.customer_id,
-            customerName: (cust as { name: string } | null)?.name || '不明',
-            selectedMenus: (s.selected_menus as string[]) || [],
-            createdAt: s.created_at,
-            stylistName: (sty as { name: string } | null)?.name || null,
-          };
-        });
-
-      // 同じ顧客の重複セッションは最新のみ表示（created_at descでソート済み）
-      const seen = new Set<string>();
-      const sessions = filtered.filter((s) => {
-        if (seen.has(s.customerId)) return false;
-        seen.add(s.customerId);
-        return true;
-      });
-
+      const sessions: PendingSession[] = await res.json();
       setPendingSessions(sessions);
     } catch (err) {
       console.error('Failed to fetch pending sessions:', err);
@@ -262,7 +212,7 @@ export default function Home() {
 
       {/* 5. Footer */}
       <footer className="fixed bottom-0 w-full p-4 pb-safe flex justify-between items-end pointer-events-none">
-        <span className="text-xs text-muted-foreground pl-2 pointer-events-auto">v3.0.0</span>
+        <span className="text-xs text-muted-foreground pl-2 pointer-events-auto">v3.1.0</span>
         <Link href="/settings/stylists" className="pointer-events-auto">
           <Button variant="ghost" size="icon" className="text-muted-foreground hover:bg-transparent hover:text-primary">
             <Settings size={20} />
