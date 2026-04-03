@@ -193,10 +193,10 @@ export function CounselingProvider({ children, customerId }: { children: ReactNo
         fetchStylist();
     }, [data.stylistId]);
 
-    const updateData = (updates: Partial<CounselingData>) => {
+    // sessionStorageに自動保存するsetDataラッパー
+    const persistAndSetData = (updater: (prev: CounselingData) => CounselingData) => {
         setData(prev => {
-            const next = { ...prev, ...updates };
-            // sessionStorageに永続化（ページ遷移してもデータを保持）
+            const next = updater(prev);
             if (typeof window !== 'undefined' && customerId) {
                 try {
                     sessionStorage.setItem(`peace_counseling_${customerId}`, JSON.stringify(next));
@@ -206,8 +206,12 @@ export function CounselingProvider({ children, customerId }: { children: ReactNo
         });
     };
 
+    const updateData = (updates: Partial<CounselingData>) => {
+        persistAndSetData(prev => ({ ...prev, ...updates }));
+    };
+
     const updateSectionData = (section: 'root' | 'middle' | 'ends', field: string, value: string | number) => {
-        setData(prev => ({
+        persistAndSetData(prev => ({
             ...prev,
             hairConditionBefore: {
                 ...prev.hairConditionBefore,
@@ -256,9 +260,9 @@ export function CounselingProvider({ children, customerId }: { children: ReactNo
             setCounselingSessionId(session.id);
             setRestoredSessionId(session.id);
 
-            // CounselingDataを復元
+            // CounselingDataを復元（sessionStorageにも保存）
             const aiSuggestion = session.ai_suggestion as Record<string, unknown> | null;
-            setData(prev => ({
+            persistAndSetData(prev => ({
                 ...prev,
                 gender: session.gender || '',
                 concerns: session.concerns || [],

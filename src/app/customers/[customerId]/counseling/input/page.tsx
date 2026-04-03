@@ -13,7 +13,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, ChevronRight, Info, User, Smile, Palette, AlertCircle, ExternalLink } from "lucide-react";
-import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useCounseling } from "@/contexts/CounselingContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -807,7 +806,7 @@ export default function CounselingInputPage() {
                         </AccordionTrigger>
                         <AccordionContent className="p-4 pt-0">
                             <div className="flex justify-end mb-4">
-                                <Link
+                                <a
                                     href="/manual/damage-level"
                                     target="_blank"
                                     rel="noopener noreferrer"
@@ -815,7 +814,7 @@ export default function CounselingInputPage() {
                                 >
                                     <ExternalLink className="w-3 h-3 mr-1" />
                                     診断マニュアル（確認方法）
-                                </Link>
+                                </a>
                             </div>
                             <div className="grid grid-cols-5 gap-1.5">
                                 {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((level) => (
@@ -895,7 +894,7 @@ export default function CounselingInputPage() {
                                 <AccordionContent className="p-4 pt-0 space-y-4">
                                     {/* ... Content ... */}
                                     <div className="flex justify-end">
-                                        <Link
+                                        <a
                                             href="/manual/personal-color"
                                             target="_blank"
                                             rel="noopener noreferrer"
@@ -903,7 +902,7 @@ export default function CounselingInputPage() {
                                         >
                                             <ExternalLink className="w-3 h-3 mr-1" />
                                             診断マニュアル（確認方法）
-                                        </Link>
+                                        </a>
                                     </div>
                                     <div className="flex p-1 bg-muted rounded-lg">
                                         <button
