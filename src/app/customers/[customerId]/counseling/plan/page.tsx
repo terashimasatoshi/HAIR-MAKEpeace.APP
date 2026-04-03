@@ -495,8 +495,8 @@ export default function AiProposalPage() {
                             }
                             await saveToSupabase(customerId, aiSuggestionWithImage);
                             alert('一時保存しました');
-                            router.push('/');
-                            router.refresh();
+                            // ハードナビゲーションで確実にホーム画面を再読み込み
+                            window.location.href = '/';
                         } catch (err) {
                             console.error('Save error:', err);
                             alert('保存に失敗しました');
