@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useCounseling } from "@/contexts/CounselingContext";
@@ -17,6 +17,7 @@ export default function CompletePage() {
     const router = useRouter();
     const params = useParams();
     const customerId = params.customerId as string;
+    const searchParams = useSearchParams();
     const { customer, isLoadingCustomer, restoredSessionId, counselingSessionId: ctxSessionId } = useCounseling();
     const [sessionId, setSessionId] = useState<string | null>(null);
     const [isCopied, setIsCopied] = useState(false);
@@ -26,15 +27,21 @@ export default function CompletePage() {
     const nextVisitDate = addWeeks(today, 6);
     const formattedNextVisit = format(nextVisitDate, "M月d日（E）", { locale: ja });
 
-    // セッションIDを取得: context → DB fallback
+    // セッションIDを取得: URLパラメータ → context → DB fallback
     useEffect(() => {
-        // contextから取得（通常フロー or 復元フロー）
+        // 1. URLパラメータから（最も確実）
+        const fromUrl = searchParams.get('session');
+        if (fromUrl) {
+            setSessionId(fromUrl);
+            return;
+        }
+        // 2. contextから（通常フロー or 復元フロー）
         const fromCtx = ctxSessionId || restoredSessionId;
         if (fromCtx) {
             setSessionId(fromCtx);
             return;
         }
-        // fallback: DBから最新セッションを取得
+        // 3. fallback: DBから最新セッションを取得
         (async () => {
             const { data, error } = await supabase
                 .from('counseling_sessions')
@@ -46,7 +53,8 @@ export default function CompletePage() {
             if (error) console.error('[CompletePage] Session query error:', error);
             if (data) setSessionId(data.id);
         })();
-    }, [customerId, ctxSessionId, restoredSessionId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [customerId]);
 
     const shareUrl = sessionId
         ? `${window.location.origin}/share/counseling/${sessionId}`

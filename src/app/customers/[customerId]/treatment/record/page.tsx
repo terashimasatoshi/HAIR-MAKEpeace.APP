@@ -157,7 +157,7 @@ export default function TreatmentRecordPage() {
     const searchParams = useSearchParams();
     const customerId = params.customerId as string;
     const resumeSessionId = searchParams.get('resume');
-    const { saveTreatment, stylist, restoreSession } = useCounseling();
+    const { saveTreatment, stylist, restoreSession, counselingSessionId } = useCounseling();
     const [isRestoring, setIsRestoring] = useState(!!resumeSessionId);
 
     // セッション再開: URLにresume=sessionIdがある場合、DBから復元
@@ -413,8 +413,9 @@ export default function TreatmentRecordPage() {
                         } catch (err) {
                             console.error('Error:', err);
                         }
-                        // 保存の成否に関わらず完了画面へ遷移
-                        router.push(`/customers/${customerId}/complete`);
+                        // 保存の成否に関わらず完了画面へ遷移（sessionIdをURLで渡す）
+                        const sid = counselingSessionId || '';
+                        router.push(`/customers/${customerId}/complete${sid ? `?session=${sid}` : ''}`);
                     }}
                 >
                     {isSaving ? (
