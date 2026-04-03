@@ -90,8 +90,9 @@ ${MATCHING_KNOWLEDGE}
 4. Consider the current season (${currentSeason}). Reflect seasonal trends, seasonal color tones, and seasonally appropriate styling in your suggestions. For example: lighter/brighter tones for spring/summer, warmer/deeper tones for autumn/winter.
 5. Analyze the customer's face shape using the Matching Knowledge.
 6. Suggest "Out Form", "In Form", and "Bang" adjustments based on the knowledge.
-7. Recommend 3 specific hair colors and 3 styles.
-8. Provide concrete styling advice.
+7. Recommend 4 specific hair colors (varying tone: 明るめ1, ナチュラル1, 暗め1, トレンド1) and 5 styles organized by category.
+8. Provide 4-5 concrete styling advice points.
+9. Styles must cover different categories: 王道 (classic), トレンド (trend), 個性派 (unique), イメチェン (transformation), 楽ちん (easy maintenance). Pick 5 from these that suit the customer best.
 
 Output must be a valid JSON object with the following structure:
 {
@@ -101,15 +102,16 @@ Output must be a valid JSON object with the following structure:
     "matchRate": 80-100 (integer)
   },
   "colors": [
-    { "name": "Color Name", "code": "#HexCode", "desc": "Reason for recommendation" }
+    { "name": "Color Name", "code": "#HexCode", "desc": "Reason for recommendation", "tone": "明るめ|ナチュラル|暗め|トレンド" }
   ],
   "styles": [
-    { "id": 1, "title": "Style Name", "desc": "Reason" }
+    { "id": 1, "title": "Style Name", "desc": "Reason and how it suits the customer", "category": "王道|トレンド|個性派|イメチェン|楽ちん" }
   ],
   "advice": [
     "Advice point 1",
     "Advice point 2",
-    "Advice point 3"
+    "Advice point 3",
+    "Advice point 4"
   ],
   "aiAnalysis": "Comprehensive advice paragraph (in Japanese). MUST include specific mentions of 'Out Form', 'In Form', and 'Bang' adjustments based on the face shape knowledge."
 }

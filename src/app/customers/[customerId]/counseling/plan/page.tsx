@@ -21,9 +21,11 @@ const getMockProposal = (faceShapeLabel: string, personalColor: string) => {
     let advice = ["似合わせの基本を意識", "なりたい印象に合わせて調整", "スタイリングでカバー"];
     let analysis = "顔型に合わせたスタイリングで、より魅力を引き出せます。";
     let styles = [
-        { id: 1, title: "ひし形レイヤー", desc: "骨格補正の王道スタイル" },
-        { id: 2, title: "ゆるふわ巻き", desc: "柔らかい印象をプラス" },
-        { id: 3, title: "くびれミディ", desc: "トレンド感のあるシルエット" }
+        { id: 1, title: "ひし形レイヤー", desc: "骨格補正の王道スタイル", category: "王道" },
+        { id: 2, title: "ゆるふわ巻き", desc: "柔らかい印象をプラス", category: "トレンド" },
+        { id: 3, title: "くびれミディ", desc: "トレンド感のあるシルエット", category: "トレンド" },
+        { id: 4, title: "ワンカールボブ", desc: "毛先ワンカールで手軽に決まる", category: "楽ちん" },
+        { id: 5, title: "ウルフカット", desc: "個性を出せるスタイル", category: "個性派" },
     ];
 
     // Colors Logic based on Personal Color Knowledge
@@ -65,9 +67,11 @@ const getMockProposal = (faceShapeLabel: string, personalColor: string) => {
             ];
             analysis = "【面長さんへの似合わせ】\n縦長印象を和らげるため、「アウトフォーム」では頬の位置にボリュームを出し、横のラインを作ります。「インフォーム」では前髪を作り、おでこを隠すことで顔の縦幅を短く見せます。また、サイドバングを少し広めにとり、肌の露出面積を調整することで、卵型のようなバランスの良いシルエットに近づけます。";
             styles = [
-                { id: 1, title: "ワイドバングボブ", desc: "前髪を広めにとり、横幅を強調してバランス調整" },
-                { id: 2, title: "ヨシンモリ（くびれ）", desc: "頬横にボリュームが出る巻き髪で華やかに" },
-                { id: 3, title: "マッシュウルフ", desc: "顔周りに動きを出して視線を横に散らす" }
+                { id: 1, title: "ワイドバングボブ", desc: "前髪を広めにとり、横幅を強調してバランス調整", category: "王道" },
+                { id: 2, title: "ヨシンモリ（くびれ）", desc: "頬横にボリュームが出る巻き髪で華やかに", category: "トレンド" },
+                { id: 3, title: "マッシュウルフ", desc: "顔周りに動きを出して視線を横に散らす", category: "個性派" },
+                { id: 4, title: "外ハネミディ", desc: "首元にくびれを作り横ラインを強調", category: "楽ちん" },
+                { id: 5, title: "レイヤーパーマ", desc: "ふんわり動きで雰囲気チェンジ", category: "イメチェン" },
             ];
             break;
         case "丸型":
@@ -79,9 +83,11 @@ const getMockProposal = (faceShapeLabel: string, personalColor: string) => {
             ];
             analysis = "【丸顔さんへの似合わせ】\n丸みをすっきり見せるため、「アウトフォーム」ではトップに高さを出し、縦長のシルエットを作ります。「インフォーム」では頬の位置を髪で隠してシャープに見せつつ、前髪はシースルーバングで額の肌色を見せ、縦の抜け感を演出します。サイドバングは長めに残し、フェイスラインを包み込むようにするのがポイントです。";
             styles = [
-                { id: 1, title: "かき上げロング", desc: "おでこを出して縦ラインを強調し、大人っぽく" },
-                { id: 2, title: "ひし形ショート", desc: "トップに高さを出し、襟足をタイトに締める" },
-                { id: 3, title: "センターパート", desc: "顔の中心に縦線を作り、丸みをカバー" }
+                { id: 1, title: "かき上げロング", desc: "おでこを出して縦ラインを強調し、大人っぽく", category: "王道" },
+                { id: 2, title: "ひし形ショート", desc: "トップに高さを出し、襟足をタイトに締める", category: "トレンド" },
+                { id: 3, title: "センターパート", desc: "顔の中心に縦線を作り、丸みをカバー", category: "楽ちん" },
+                { id: 4, title: "ハンサムショート", desc: "クール系にイメチェンしたい方に", category: "イメチェン" },
+                { id: 5, title: "ウルフレイヤー", desc: "トップの動きと襟足で顔型をカバー", category: "個性派" },
             ];
             break;
         case "ベース型":
@@ -92,9 +98,11 @@ const getMockProposal = (faceShapeLabel: string, personalColor: string) => {
             ];
             analysis = "【ベース型さんへの似合わせ】\nエラ張りや四角い印象を和らげるため、「アウトフォーム」ではトップに高さを出して視線を上に誘導します。「インフォーム」ではエラ部分をサイドの髪や後れ毛でカバーし、肌の露出を卵型に近づけます。前髪は隙間のあるデザインにし、直線を避けて曲線的なカールをつけることで、女性らしく柔らかい印象になります。";
             styles = [
-                { id: 1, title: "ニュアンスパーマ", desc: "曲線的な動きで骨格の角ばりをぼかす" },
-                { id: 2, title: "フェザーバング", desc: "顔周りに外ハネを作り、エラから視線を逸らす" },
-                { id: 3, title: "レイヤーロング", desc: "顔周りの段差で動きを出し、輪郭をソフトに" }
+                { id: 1, title: "ニュアンスパーマ", desc: "曲線的な動きで骨格の角ばりをぼかす", category: "王道" },
+                { id: 2, title: "フェザーバング", desc: "顔周りに外ハネを作り、エラから視線を逸らす", category: "トレンド" },
+                { id: 3, title: "レイヤーロング", desc: "顔周りの段差で動きを出し、輪郭をソフトに", category: "楽ちん" },
+                { id: 4, title: "韓国風ヨシンモリ", desc: "柔らかいS字カーブでエラをカバー", category: "イメチェン" },
+                { id: 5, title: "マッシュショート", desc: "丸みのあるシルエットで角を緩和", category: "個性派" },
             ];
             break;
         case "逆三角形":
@@ -105,16 +113,18 @@ const getMockProposal = (faceShapeLabel: string, personalColor: string) => {
             ];
             analysis = "【逆三角形さんへの似合わせ】\nシャープな顎周りを優しく見せるため、「アウトフォーム」ではあご〜首元にかけてボリュームや動きを出します。逆にハチ周りは抑えて頭の形をきれいに見せます。「インフォーム」では前髪の幅を狭くとり、横幅を強調しすぎないようにします。全体的にふんわりとしたAライン気味のシルエットが似合います。";
             styles = [
-                { id: 1, title: "Aラインボブ", desc: "毛先に重みを残し、あご周りの寂しさをカバー" },
-                { id: 2, title: "外ハネミディ", desc: "首元のくびれと外ハネで、視線を下に集める" },
-                { id: 3, title: "韓国風レイヤー", desc: "顔周りのリバース巻きで華やかさと柔らかさを" }
+                { id: 1, title: "Aラインボブ", desc: "毛先に重みを残し、あご周りの寂しさをカバー", category: "王道" },
+                { id: 2, title: "外ハネミディ", desc: "首元のくびれと外ハネで、視線を下に集める", category: "トレンド" },
+                { id: 3, title: "韓国風レイヤー", desc: "顔周りのリバース巻きで華やかさと柔らかさを", category: "イメチェン" },
+                { id: 4, title: "ワンカールロブ", desc: "毛先だけ内巻きで簡単に決まる", category: "楽ちん" },
+                { id: 5, title: "ウェットパーマ", desc: "束感のある濡れ髪スタイルでモードに", category: "個性派" },
             ];
             break;
     }
 
     return {
         summary,
-        colors: colors.slice(0, 3),
+        colors: colors.slice(0, 4),
         styles,
         advice,
         aiAnalysis: analysis
@@ -303,6 +313,9 @@ export default function AiProposalPage() {
                                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
                                 </div>
                                 <p className="text-xs font-bold text-center group-hover:text-primary transition-colors">{color.name}</p>
+                                {color.tone && (
+                                    <p className="text-[10px] text-muted-foreground text-center">{color.tone}</p>
+                                )}
                             </button>
                         ))}
                     </div>
@@ -400,8 +413,13 @@ export default function AiProposalPage() {
                                     <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                                         <Scissors className="h-5 w-5 text-primary" />
                                     </div>
-                                    <div>
-                                        <h4 className="font-bold mb-1 text-primary text-base">{style.title}</h4>
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <h4 className="font-bold text-primary text-base">{style.title}</h4>
+                                            {style.category && (
+                                                <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0">{style.category}</Badge>
+                                            )}
+                                        </div>
                                         <p className="text-sm text-gray-600 leading-relaxed">{style.desc}</p>
                                     </div>
                                 </CardContent>
