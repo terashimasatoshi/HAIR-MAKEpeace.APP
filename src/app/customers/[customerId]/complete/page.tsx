@@ -20,6 +20,7 @@ export default function CompletePage() {
     const searchParams = useSearchParams();
     const { customer, isLoadingCustomer, restoredSessionId, counselingSessionId: ctxSessionId } = useCounseling();
     const [sessionId, setSessionId] = useState<string | null>(null);
+    const [shareUrl, setShareUrl] = useState('');
     const [isCopied, setIsCopied] = useState(false);
 
     // Calculate next visit date (6 weeks later)
@@ -29,24 +30,23 @@ export default function CompletePage() {
 
     // セッションIDを取得: URLパラメータ → context → DB fallback
     useEffect(() => {
-        // 1. URLパラメータから（最も確実）
         const fromUrl = searchParams.get('session');
-        if (fromUrl) {
-            setSessionId(fromUrl);
-            return;
-        }
-        // 2. contextから（通常フロー or 復元フロー）
         const fromCtx = ctxSessionId || restoredSessionId;
-        if (fromCtx) {
-            setSessionId(fromCtx);
+        const resolved = fromUrl || fromCtx;
+
+        if (resolved) {
+            setSessionId(resolved);
             return;
         }
-        // 3. fallback: DBから最新セッションを取得
+        // fallback: DBから今日の最新セッションを取得
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
         (async () => {
             const { data, error } = await supabase
                 .from('counseling_sessions')
                 .select('id')
                 .eq('customer_id', customerId)
+                .gte('created_at', todayStart.toISOString())
                 .order('created_at', { ascending: false })
                 .limit(1)
                 .maybeSingle();
@@ -56,9 +56,12 @@ export default function CompletePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [customerId]);
 
-    const shareUrl = sessionId
-        ? `${window.location.origin}/share/counseling/${sessionId}`
-        : '';
+    // shareUrlはクライアントサイドでのみ生成（SSRでwindow参照を避ける）
+    useEffect(() => {
+        if (sessionId) {
+            setShareUrl(`${window.location.origin}/share/counseling/${sessionId}`);
+        }
+    }, [sessionId]);
 
     const handleCopyUrl = async () => {
         if (!shareUrl) return;

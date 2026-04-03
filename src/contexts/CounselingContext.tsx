@@ -231,11 +231,38 @@ export function CounselingProvider({ children, customerId }: { children: ReactNo
         setRestoredSessionId(null);
         if (typeof window !== 'undefined' && customerId) {
             sessionStorage.removeItem(`peace_counseling_${customerId}`);
+            sessionStorage.removeItem(`peace_visitId_${customerId}`);
+            sessionStorage.removeItem(`peace_sessionId_${customerId}`);
         }
     };
 
-    const [visitId, setVisitId] = useState<string | null>(null);
-    const [counselingSessionId, setCounselingSessionId] = useState<string | null>(null);
+    // visitId/counselingSessionIdもsessionStorageに永続化（back navigation対応）
+    const [visitId, setVisitIdRaw] = useState<string | null>(() => {
+        if (typeof window !== 'undefined' && customerId) {
+            return sessionStorage.getItem(`peace_visitId_${customerId}`) || null;
+        }
+        return null;
+    });
+    const [counselingSessionId, setCounselingSessionIdRaw] = useState<string | null>(() => {
+        if (typeof window !== 'undefined' && customerId) {
+            return sessionStorage.getItem(`peace_sessionId_${customerId}`) || null;
+        }
+        return null;
+    });
+    const setVisitId = (id: string | null) => {
+        setVisitIdRaw(id);
+        if (typeof window !== 'undefined' && customerId) {
+            if (id) sessionStorage.setItem(`peace_visitId_${customerId}`, id);
+            else sessionStorage.removeItem(`peace_visitId_${customerId}`);
+        }
+    };
+    const setCounselingSessionId = (id: string | null) => {
+        setCounselingSessionIdRaw(id);
+        if (typeof window !== 'undefined' && customerId) {
+            if (id) sessionStorage.setItem(`peace_sessionId_${customerId}`, id);
+            else sessionStorage.removeItem(`peace_sessionId_${customerId}`);
+        }
+    };
     const [restoredSessionId, setRestoredSessionId] = useState<string | null>(null);
     const isSavingRef = useRef(false);
 
@@ -505,23 +532,25 @@ export function CounselingProvider({ children, customerId }: { children: ReactNo
             }
         }
 
-        // セッションを完了に更新
+        // セッションを完了に更新（idで特定、fallbackはvisit_id + customer_idで絞り込み）
         if (counselingSessionId) {
             await supabase
                 .from('counseling_sessions')
                 .update({ status: 'completed' })
                 .eq('id', counselingSessionId);
         } else if (currentVisitId) {
-            // counselingSessionIdがない場合、visit_idから検索して更新
             await supabase
                 .from('counseling_sessions')
                 .update({ status: 'completed' })
-                .eq('visit_id', currentVisitId);
+                .eq('visit_id', currentVisitId)
+                .eq('customer_id', custId);
         }
 
         // 完了後にsessionStorageをクリア
         if (typeof window !== 'undefined' && custId) {
             sessionStorage.removeItem(`peace_counseling_${custId}`);
+            sessionStorage.removeItem(`peace_visitId_${custId}`);
+            sessionStorage.removeItem(`peace_sessionId_${custId}`);
         }
 
         return true;

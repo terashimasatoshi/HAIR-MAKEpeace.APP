@@ -10,6 +10,9 @@ let csrfTokenCache = "";
 let csrfFetchPromise: Promise<string> | null = null;
 
 async function getCsrfToken(): Promise<string> {
+  // 開発環境ではCSRFトークン不要（サーバー側でスキップされる）
+  if (process.env.NODE_ENV === "development") return "";
+
   if (csrfTokenCache) return csrfTokenCache;
 
   // 重複リクエスト防止

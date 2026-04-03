@@ -548,13 +548,14 @@ export default function AiProposalPage() {
                                 }
                             }
                             await saveToSupabase(customerId, aiSuggestionWithImage);
+                            // 保存成功後に遷移
+                            router.push(`/customers/${customerId}/treatment/record`);
                         } catch (err) {
                             console.error('Save error:', err);
+                            alert('保存に失敗しました。もう一度お試しください。');
                         } finally {
                             setIsSaving(false);
                         }
-                        // 保存の成否に関わらず次の画面へ遷移
-                        router.push(`/customers/${customerId}/treatment/record`);
                     }}
                 >
                     {isSaving ? (

@@ -67,7 +67,7 @@ ${Array.isArray(body.concerns) && body.concerns.length > 0 ? body.concerns.join(
 口コミ文のみを出力してください。前置きや説明は不要です。`;
 
     const response = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
+      model: 'claude-haiku-4-5-20250901',
       max_tokens: 500,
       temperature: 0.8,
       messages: [{ role: 'user', content: prompt }],

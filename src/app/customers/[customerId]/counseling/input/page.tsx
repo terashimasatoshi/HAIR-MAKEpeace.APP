@@ -332,7 +332,8 @@ export default function CounselingInputPage() {
         };
 
         fillFromLatestSession();
-    }, [customerId, storedDiagnosis.faceShape, storedDiagnosis.personalColor, storedDiagnosis.personalColorType]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [customerId]);
 
     const customerFaceShape = storedDiagnosis.faceShape;
     const customerPersonalColor = storedDiagnosis.personalColor;
