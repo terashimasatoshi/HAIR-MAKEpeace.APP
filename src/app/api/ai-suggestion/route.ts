@@ -81,18 +81,19 @@ ${MATCHING_KNOWLEDGE}
 0. If "Today's Request" is provided, prioritize it first and adjust all suggestions to match it.
 1. IMPORTANT: The customer is ${genderLabel}. All color suggestions, style suggestions, and advice MUST be appropriate for ${genderLabel}. For male customers, suggest masculine styles (short cuts, fades, textured styles, etc.) and natural/subtle color tones. For female customers, suggest a wider range of styles and colors.
 2. The customer's age is ${ageLabel}. Suggest styles and colors appropriate for their age group. For example: 20s can handle bolder trends, 30-40s balance trend with sophistication, 50s+ prioritize elegance, volume, and gray coverage if needed. Never suggest overly youthful styles for older customers or overly mature styles for younger ones.
-3. The customer's current hair length is ${hairLengthLabel} and their length preference is "${lengthPrefLabel}". This is critical for style suggestions:
+3. ***MOST CRITICAL RULE*** — The customer's current hair length is 【${hairLengthLabel}】 and their length preference is 【${lengthPrefLabel}】. EVERY style suggestion MUST respect this:
    - "短くしたい": Suggest styles that are notably shorter than current length.
    - "少し短くしたい": Suggest styles slightly shorter, like trimming or one step down.
-   - "現状維持": Keep similar length, suggest changes through layers, texture, color, or styling only.
-   - "伸ばしたい": Do NOT suggest cutting shorter. Focus on maintaining health while growing, and suggest styles for the target longer length.
-   - If no preference given, suggest a balanced mix.
+   - "現状維持": Keep the SAME length. Only suggest changes through layers, texture, color, or styling. Do NOT suggest shorter styles like bob or short if the customer has long hair.
+   - "伸ばしたい": ABSOLUTELY DO NOT suggest cutting shorter (no bob, no short, no medium if currently long). Focus on maintaining health while growing, and suggest styles at the CURRENT or LONGER length only (e.g., long layer, long wave, super long straight).
+   - If no preference given, suggest a balanced mix around the current length.
+   - VIOLATION CHECK: Before outputting, verify EVERY style title is compatible with ${hairLengthLabel} + "${lengthPrefLabel}". If a style name implies a shorter length than current, REPLACE it.
 4. Consider the current season (${currentSeason}). Reflect seasonal trends, seasonal color tones, and seasonally appropriate styling in your suggestions. For example: lighter/brighter tones for spring/summer, warmer/deeper tones for autumn/winter.
 5. Analyze the customer's face shape using the Matching Knowledge.
 6. Suggest "Out Form", "In Form", and "Bang" adjustments based on the knowledge.
 7. Recommend 4 specific hair colors (varying tone: 明るめ1, ナチュラル1, 暗め1, トレンド1) and 5 styles organized by category.
 8. Provide 4-5 concrete styling advice points.
-9. Styles must cover different categories: 王道 (classic), トレンド (trend), 個性派 (unique), イメチェン (transformation), 楽ちん (easy maintenance). Pick 5 from these that suit the customer best.
+9. Styles must cover different categories: 王道 (classic), トレンド (trend), 個性派 (unique), イメチェン (transformation), 楽ちん (easy maintenance). Pick 5 from these that suit the customer best. REMEMBER: ALL 5 styles MUST be compatible with the customer's current length (${hairLengthLabel}) and preference (${lengthPrefLabel}). For example, if hair is ロング and preference is 伸ばしたい, all 5 must be long-hair styles.
 
 Output must be a valid JSON object with the following structure:
 {
