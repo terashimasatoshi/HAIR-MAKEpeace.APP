@@ -195,31 +195,30 @@ export default function CounselingInputPage() {
         setIsLoadingHistory(true);
         setShowFullPrevAiSuggestion(false);
         try {
-            // 1. Get the most recent counseling session
+            // 1. Get the most recent COMPLETED counseling session (not the current in-progress one)
             const { data: counselingSession, error: csError } = await supabase
                 .from('counseling_sessions')
                 .select('*')
                 .eq('customer_id', customerId)
+                .eq('status', 'completed')
                 .order('created_at', { ascending: false })
                 .limit(1)
                 .maybeSingle();
 
             if (csError || !counselingSession) {
-                console.error('[PreviousRecord] counseling_sessions query failed or empty', {
+                console.log('[PreviousRecord] No completed sessions found', {
                     customerId,
                     error: csError,
-                    hint: 'If error is permission denied, check RLS policy for counseling_sessions SELECT.',
                 });
                 setPrevRecord(null);
                 return;
             }
 
-            // 2. Get latest treatment record by customer_id
+            // 2. Get treatment record linked to that session's visit
             const { data: treatmentRecord, error: trError } = await supabase
                 .from('treatment_records')
                 .select('*')
-                .eq('customer_id', customerId)
-                .order('created_at', { ascending: false })
+                .eq('visit_id', counselingSession.visit_id)
                 .limit(1)
                 .maybeSingle();
 
@@ -301,6 +300,7 @@ export default function CounselingInputPage() {
                 .from('counseling_sessions')
                 .select('face_shape, personal_color_base, personal_color_season')
                 .eq('customer_id', customerId)
+                .eq('status', 'completed')
                 .order('created_at', { ascending: false })
                 .limit(1)
                 .maybeSingle();
