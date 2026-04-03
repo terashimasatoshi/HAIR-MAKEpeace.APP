@@ -81,6 +81,8 @@ type CounselingContextType = {
     restoreSession: (sessionId: string) => Promise<boolean>;
     /** 復元されたセッションID */
     restoredSessionId: string | null;
+    /** 現在のカウンセリングセッションID */
+    counselingSessionId: string | null;
 };
 
 const CounselingContext = createContext<CounselingContextType | undefined>(undefined);
@@ -520,7 +522,7 @@ export function CounselingProvider({ children, customerId }: { children: ReactNo
     };
 
     return (
-        <CounselingContext.Provider value={{ customer, setCustomer, stylist, data, isLoadingCustomer, updateData, updateSectionData, saveToSupabase, saveTreatment, resetData, restoreSession, restoredSessionId }}>
+        <CounselingContext.Provider value={{ customer, setCustomer, stylist, data, isLoadingCustomer, updateData, updateSectionData, saveToSupabase, saveTreatment, resetData, restoreSession, restoredSessionId, counselingSessionId }}>
             {children}
         </CounselingContext.Provider>
     );

@@ -17,7 +17,7 @@ export default function CompletePage() {
     const router = useRouter();
     const params = useParams();
     const customerId = params.customerId as string;
-    const { customer, isLoadingCustomer } = useCounseling();
+    const { customer, isLoadingCustomer, restoredSessionId, counselingSessionId: ctxSessionId } = useCounseling();
     const [sessionId, setSessionId] = useState<string | null>(null);
     const [isCopied, setIsCopied] = useState(false);
 
@@ -26,19 +26,27 @@ export default function CompletePage() {
     const nextVisitDate = addWeeks(today, 6);
     const formattedNextVisit = format(nextVisitDate, "M月d日（E）", { locale: ja });
 
-    // 最新のセッションIDを取得
+    // セッションIDを取得: context → DB fallback
     useEffect(() => {
+        // contextから取得（通常フロー or 復元フロー）
+        const fromCtx = ctxSessionId || restoredSessionId;
+        if (fromCtx) {
+            setSessionId(fromCtx);
+            return;
+        }
+        // fallback: DBから最新セッションを取得
         (async () => {
-            const { data } = await supabase
+            const { data, error } = await supabase
                 .from('counseling_sessions')
                 .select('id')
                 .eq('customer_id', customerId)
                 .order('created_at', { ascending: false })
                 .limit(1)
-                .single();
+                .maybeSingle();
+            if (error) console.error('[CompletePage] Session query error:', error);
             if (data) setSessionId(data.id);
         })();
-    }, [customerId]);
+    }, [customerId, ctxSessionId, restoredSessionId]);
 
     const shareUrl = sessionId
         ? `${typeof window !== 'undefined' ? window.location.origin : ''}/share/counseling/${sessionId}`
