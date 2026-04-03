@@ -53,70 +53,150 @@ export async function POST(request: Request) {
       apiKey: process.env.ANTHROPIC_API_KEY!,
     });
 
+    // ── デザインスペース：長さ×希望に基づくOK/NGリスト ──
+    const LENGTH_ORDER = ['ベリーショート', 'ショート', 'ボブ', 'ミディアム', 'ロング'];
+    const currentIdx = LENGTH_ORDER.indexOf(hairLengthLabel);
+
+    const STYLE_EXAMPLES: Record<string, string[]> = {
+      'ベリーショート': ['ベリーショートレイヤー', 'フェードカット', 'ソフトモヒカン', 'マッシュベリーショート', 'ピクシーカット', 'バズカット'],
+      'ショート': ['ショートレイヤー', 'ハンサムショート', 'マッシュショート', 'ショートボブ', 'ショートウルフ', '耳かけショート'],
+      'ボブ': ['ボブ', 'ミニボブ', '切りっぱなしボブ', 'レイヤーボブ', '前下がりボブ', 'ワンレンボブ', '外ハネボブ'],
+      'ミディアム': ['ミディアムレイヤー', 'くびれミディ', 'ロブ', '外ハネミディ', 'ウルフミディ', 'ミディアムパーマ'],
+      'ロング': ['ロングレイヤー', 'ストレートロング', 'ロングウェーブ', 'ヨシンモリ', '姫カット', 'ワンレングスロング', 'ロングウルフ', '巻き髪ロング'],
+    };
+
+    let allowedLengths: string[] = [];
+    let forbiddenLengths: string[] = [];
+    let emotionalContext = '';
+    let designConstraint = '';
+
+    if (lengthPrefLabel === '伸ばしたい') {
+      allowedLengths = LENGTH_ORDER.slice(Math.max(0, currentIdx));
+      forbiddenLengths = LENGTH_ORDER.slice(0, currentIdx);
+      emotionalContext = `このお客様は今の${hairLengthLabel}をさらに伸ばしたいと考えています。何ヶ月も我慢して伸ばしてきた髪を切る提案は、お客様の努力を否定することになります。`;
+      designConstraint = `${hairLengthLabel}以上の長さのスタイルのみ提案してください。${forbiddenLengths.length > 0 ? forbiddenLengths.join('・') + 'は絶対にNGです。' : ''}`;
+    } else if (lengthPrefLabel === '現状維持') {
+      allowedLengths = [hairLengthLabel];
+      forbiddenLengths = LENGTH_ORDER.filter(l => l !== hairLengthLabel);
+      emotionalContext = `このお客様は今の${hairLengthLabel}の長さが気に入っています。長さを変えずに、カラーやレイヤー、質感の変化でリフレッシュしたいと思っています。`;
+      designConstraint = `${hairLengthLabel}の長さを維持するスタイルのみ提案してください。長さが変わるスタイル名（${forbiddenLengths.join('・')}）はNGです。`;
+    } else if (lengthPrefLabel === '少し短くしたい') {
+      const shorter = currentIdx > 0 ? [LENGTH_ORDER[currentIdx - 1], hairLengthLabel] : [hairLengthLabel];
+      allowedLengths = shorter;
+      forbiddenLengths = LENGTH_ORDER.filter(l => !shorter.includes(l));
+      emotionalContext = `このお客様は少しだけ短くして整えたいと考えています。大幅なイメチェンではなく、毛先の整理や1段階短い程度のスタイルを希望しています。`;
+      designConstraint = `${shorter.join('〜')}の範囲のスタイルを提案してください。`;
+    } else if (lengthPrefLabel === '短くしたい') {
+      allowedLengths = LENGTH_ORDER.slice(0, currentIdx + 1);
+      forbiddenLengths = LENGTH_ORDER.slice(currentIdx + 1);
+      emotionalContext = `このお客様は思い切って短くしたいと考えています。変化を楽しみたい気持ちを大切に、現在の${hairLengthLabel}より短いスタイルを積極的に提案してください。`;
+      designConstraint = `${hairLengthLabel}以下の長さのスタイルを中心に提案してください。`;
+    } else {
+      allowedLengths = LENGTH_ORDER;
+      emotionalContext = `特に長さの希望はありません。現在の${hairLengthLabel}を基準に、バランスの良い提案をしてください。`;
+      designConstraint = `${hairLengthLabel}前後の長さを中心に提案してください。`;
+    }
+
+    const allowedStyleExamples = allowedLengths
+      .map(l => STYLE_EXAMPLES[l] || [])
+      .flat()
+      .join('、');
+    const forbiddenStyleExamples = forbiddenLengths
+      .map(l => STYLE_EXAMPLES[l] || [])
+      .flat()
+      .join('、');
+
+    const isMale = gender === 'male';
+    const categoryInstruction = isMale
+      ? '王道 (classic), トレンド (trend), クール (cool), ナチュラル (natural), 楽ちん (easy maintenance)'
+      : '王道 (classic), トレンド (trend), 個性派 (unique), イメチェン (transformation), 楽ちん (easy maintenance)';
+
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 3000,
       messages: [{
         role: 'user',
-        content: `
-You are a professional hair stylist.
-Based on the following customer profile and the "Matching Knowledge", suggest suitable hair colors and styles.
+        content: `あなたは美容室「HAIR & MAKE peace」のプロの美容師です。
+お客様の情報をもとに、似合う髪色とスタイルを提案してください。
 
-# Matching Knowledge
+━━━━━━━━━━━━━━━━━━━━
+★ 最重要：お客様の髪の長さと希望
+━━━━━━━━━━━━━━━━━━━━
+
+現在の長さ：【${hairLengthLabel}】
+お客様の希望：【${lengthPrefLabel}】
+
+${emotionalContext}
+
+■ デザインスペース（この範囲内でのみ提案すること）
+${designConstraint}
+
+✅ 提案OK なスタイル例：${allowedStyleExamples || 'すべて'}
+${forbiddenStyleExamples ? `❌ 絶対NG なスタイル例：${forbiddenStyleExamples}` : ''}
+
+━━━━━━━━━━━━━━━━━━━━
+お客様プロフィール
+━━━━━━━━━━━━━━━━━━━━
+
+- 性別：${genderLabel}
+- 年齢：${ageLabel}
+- 顔型：${faceShape}（面長/丸顔/ベース型/逆三角形/卵型に分類して分析）
+- パーソナルカラー：${personalColor}（ベース：${personalColorBase || '不明'}）
+- 髪の悩み：${concerns?.length > 0 ? concerns.join('、') : 'なし'}
+- 今日の季節：${currentSeason}
+- 本日のご要望：${customerRequest?.trim() ? customerRequest : 'なし'}
+
+━━━━━━━━━━━━━━━━━━━━
+似合わせナレッジ
+━━━━━━━━━━━━━━━━━━━━
+
 ${MATCHING_KNOWLEDGE}
 
-# Customer Profile
-- Gender: ${genderLabel}
-- Age: ${ageLabel}
-- Current Hair Length: ${hairLengthLabel}
-- Length Preference: ${lengthPrefLabel}
-- Current Season: ${currentSeason}
-- Face Shape: ${faceShape} (Map this to one of: 面長, 丸顔, ベース型, 逆三角形. If "egg" or others, suggest generally balanced styles)
-- Personal Color: ${personalColor}
-- Personal Color Base: ${personalColorBase || 'unknown'}
-- Concerns: ${concerns?.join(',')}
-- Today's Request: ${customerRequest?.trim() ? customerRequest : 'なし'}
+━━━━━━━━━━━━━━━━━━━━
+提案ルール
+━━━━━━━━━━━━━━━━━━━━
 
-# Instructions
-0. If "Today's Request" is provided, prioritize it first and adjust all suggestions to match it.
-1. IMPORTANT: The customer is ${genderLabel}. All color suggestions, style suggestions, and advice MUST be appropriate for ${genderLabel}. For male customers, suggest masculine styles (short cuts, fades, textured styles, etc.) and natural/subtle color tones. For female customers, suggest a wider range of styles and colors.
-2. The customer's age is ${ageLabel}. Suggest styles and colors appropriate for their age group. For example: 20s can handle bolder trends, 30-40s balance trend with sophistication, 50s+ prioritize elegance, volume, and gray coverage if needed. Never suggest overly youthful styles for older customers or overly mature styles for younger ones.
-3. ***MOST CRITICAL RULE*** — The customer's current hair length is 【${hairLengthLabel}】 and their length preference is 【${lengthPrefLabel}】. EVERY style suggestion MUST respect this:
-   - "短くしたい": Suggest styles that are notably shorter than current length.
-   - "少し短くしたい": Suggest styles slightly shorter, like trimming or one step down.
-   - "現状維持": Keep the SAME length. Only suggest changes through layers, texture, color, or styling. Do NOT suggest shorter styles like bob or short if the customer has long hair.
-   - "伸ばしたい": ABSOLUTELY DO NOT suggest cutting shorter (no bob, no short, no medium if currently long). Focus on maintaining health while growing, and suggest styles at the CURRENT or LONGER length only (e.g., long layer, long wave, super long straight).
-   - If no preference given, suggest a balanced mix around the current length.
-   - VIOLATION CHECK: Before outputting, verify EVERY style title is compatible with ${hairLengthLabel} + "${lengthPrefLabel}". If a style name implies a shorter length than current, REPLACE it.
-4. Consider the current season (${currentSeason}). Reflect seasonal trends, seasonal color tones, and seasonally appropriate styling in your suggestions. For example: lighter/brighter tones for spring/summer, warmer/deeper tones for autumn/winter.
-5. Analyze the customer's face shape using the Matching Knowledge.
-6. Suggest "Out Form", "In Form", and "Bang" adjustments based on the knowledge.
-7. Recommend 4 specific hair colors (varying tone: 明るめ1, ナチュラル1, 暗め1, トレンド1) and 5 styles organized by category.
-8. Provide 4-5 concrete styling advice points.
-9. Styles must cover different categories: 王道 (classic), トレンド (trend), 個性派 (unique), イメチェン (transformation), 楽ちん (easy maintenance). Pick 5 from these that suit the customer best. REMEMBER: ALL 5 styles MUST be compatible with the customer's current length (${hairLengthLabel}) and preference (${lengthPrefLabel}). For example, if hair is ロング and preference is 伸ばしたい, all 5 must be long-hair styles.
+1. 本日のご要望がある場合は最優先で反映する
+2. ${genderLabel}に適したスタイル・カラーを提案する
+3. ${ageLabel}の年代に合ったスタイルを提案する
+4. 顔型に基づき「アウトフォーム」「インフォーム」「バング」の調整を含める
+5. カラー4色を提案（明るめ1、ナチュラル1、暗め1、トレンド1）
+6. スタイル5つを提案。カテゴリ：${categoryInstruction}
+   ★★★ 5つ全てが「デザインスペース」内の長さであること ★★★
+7. スタイリングアドバイスを4〜5点
+8. 季節（${currentSeason}）のトレンドを反映する
 
-Output must be a valid JSON object with the following structure:
+━━━━━━━━━━━━━━━━━━━━
+出力形式（JSON）
+━━━━━━━━━━━━━━━━━━━━
+
+以下のJSON形式で出力してください。JSON以外のテキストは不要です。
+
 {
+  "lengthCheck": {
+    "currentLength": "${hairLengthLabel}",
+    "preference": "${lengthPrefLabel}",
+    "allStylesRespectLength": true
+  },
   "summary": {
-    "faceShape": "Customer's face shape (in Japanese)",
-    "personalColor": "Customer's personal color (in Japanese)",
-    "matchRate": 80-100 (integer)
+    "faceShape": "顔型（日本語）",
+    "personalColor": "パーソナルカラー（日本語）",
+    "matchRate": 80〜100の整数
   },
   "colors": [
-    { "name": "Color Name", "code": "#HexCode", "desc": "Reason for recommendation", "tone": "明るめ|ナチュラル|暗め|トレンド" }
+    { "name": "カラー名", "code": "#HexCode", "desc": "おすすめ理由", "tone": "明るめ|ナチュラル|暗め|トレンド" }
   ],
   "styles": [
-    { "id": 1, "title": "Style Name", "desc": "Reason and how it suits the customer", "category": "王道|トレンド|個性派|イメチェン|楽ちん" }
+    { "id": 1, "title": "スタイル名", "desc": "おすすめ理由とお客様への似合わせポイント", "category": "王道|トレンド|個性派|イメチェン|楽ちん" }
   ],
   "advice": [
-    "Advice point 1",
-    "Advice point 2",
-    "Advice point 3",
-    "Advice point 4"
+    "アドバイス1",
+    "アドバイス2",
+    "アドバイス3",
+    "アドバイス4"
   ],
-  "aiAnalysis": "Comprehensive advice paragraph (in Japanese). MUST include specific mentions of 'Out Form', 'In Form', and 'Bang' adjustments based on the face shape knowledge."
+  "aiAnalysis": "総合アドバイス（日本語）。必ず「アウトフォーム」「インフォーム」「バング」への具体的な言及を含めること。"
 }
-Return ONLY the JSON. Do not include markdown code block markers.
 `
       }]
     });
@@ -131,6 +211,11 @@ Return ONLY the JSON. Do not include markdown code block markers.
 
     try {
       const result = JSON.parse(content);
+      // lengthCheckをログ出力して検証（クライアントには送らない）
+      if (result.lengthCheck) {
+        console.log('[AI Suggestion] Length check:', result.lengthCheck);
+        delete result.lengthCheck;
+      }
       return NextResponse.json(result);
     } catch (parseError) {
       console.error('JSON parse error:', parseError);
