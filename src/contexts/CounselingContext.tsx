@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useStylist } from '@/contexts/StylistContext';
 import { ENABLE_LOCAL_FALLBACK } from '@/lib/runtime-flags';
@@ -237,6 +237,7 @@ export function CounselingProvider({ children, customerId }: { children: ReactNo
     const [visitId, setVisitId] = useState<string | null>(null);
     const [counselingSessionId, setCounselingSessionId] = useState<string | null>(null);
     const [restoredSessionId, setRestoredSessionId] = useState<string | null>(null);
+    const isSavingRef = useRef(false);
 
     /** DBから未完了セッションを復元してContextにロードする */
     const restoreSession = async (sessionId: string): Promise<boolean> => {
@@ -325,6 +326,9 @@ export function CounselingProvider({ children, customerId }: { children: ReactNo
 
     // ... existing saveToSupabase ...
     const saveToSupabase = async (custId: string, aiSuggestion?: object): Promise<{ visitId: string | null; sessionId: string | null }> => {
+        // ダブルタップによる重複作成防止
+        if (isSavingRef.current) return { visitId, sessionId: counselingSessionId };
+        isSavingRef.current = true;
         try {
             // Always persist diagnosis cache for flow branching (even if Supabase fails)
             persistDiagnosisCache(custId);
@@ -411,6 +415,8 @@ export function CounselingProvider({ children, customerId }: { children: ReactNo
         } catch (err) {
             console.error('Error saving to Supabase:', err);
             return { visitId: null, sessionId: null };
+        } finally {
+            isSavingRef.current = false;
         }
     };
 

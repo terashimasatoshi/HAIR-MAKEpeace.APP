@@ -21,7 +21,7 @@ export async function POST(
       .select('id')
       .eq('session_id', sessionId)
       .eq('timing', body.timing || 'before')
-      .single();
+      .maybeSingle();
 
     let result;
     
@@ -47,7 +47,7 @@ export async function POST(
         })
         .eq('id', existing.id)
         .select()
-        .single();
+        .maybeSingle();
       
       if (error) throw error;
       result = data;
@@ -74,7 +74,7 @@ export async function POST(
           manageability: body.manageability,
         })
         .select()
-        .single();
+        .maybeSingle();
       
       if (error) throw error;
       result = data;
@@ -106,7 +106,7 @@ export async function GET(
       .select('*')
       .eq('session_id', sessionId)
       .eq('timing', timing)
-      .single();
+      .maybeSingle();
 
     if (error && error.code !== 'PGRST116') {
       throw error;

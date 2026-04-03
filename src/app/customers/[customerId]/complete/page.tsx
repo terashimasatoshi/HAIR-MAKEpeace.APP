@@ -49,7 +49,7 @@ export default function CompletePage() {
     }, [customerId, ctxSessionId, restoredSessionId]);
 
     const shareUrl = sessionId
-        ? `${typeof window !== 'undefined' ? window.location.origin : ''}/share/counseling/${sessionId}`
+        ? `${window.location.origin}/share/counseling/${sessionId}`
         : '';
 
     const handleCopyUrl = async () => {

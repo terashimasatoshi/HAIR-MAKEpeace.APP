@@ -262,7 +262,7 @@ export default function Home() {
 
       {/* 5. Footer */}
       <footer className="fixed bottom-0 w-full p-4 pb-safe flex justify-between items-end pointer-events-none">
-        <span className="text-xs text-muted-foreground pl-2 pointer-events-auto">v2.0.0</span>
+        <span className="text-xs text-muted-foreground pl-2 pointer-events-auto">v2.1.0</span>
         <Link href="/settings/stylists" className="pointer-events-auto">
           <Button variant="ghost" size="icon" className="text-muted-foreground hover:bg-transparent hover:text-primary">
             <Settings size={20} />

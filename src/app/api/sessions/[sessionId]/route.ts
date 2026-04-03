@@ -26,11 +26,15 @@ export async function GET(
         stylist:stylist_id (id, name)
       `)
       .eq('id', sessionId)
-      .single();
+      .maybeSingle();
 
     if (error) {
       console.error('Supabase error:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    if (!data) {
+      return NextResponse.json({ error: 'Session not found' }, { status: 404 });
     }
 
     return NextResponse.json({

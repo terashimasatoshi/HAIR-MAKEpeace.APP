@@ -68,5 +68,11 @@ export async function verifyCsrfToken(token: string): Promise<boolean> {
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
 
-  return providedHex === expectedHex;
+  // 定数時間比較（タイミング攻撃防止）
+  if (providedHex.length !== expectedHex.length) return false;
+  const a = new TextEncoder().encode(providedHex);
+  const b = new TextEncoder().encode(expectedHex);
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i];
+  return diff === 0;
 }
