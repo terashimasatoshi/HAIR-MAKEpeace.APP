@@ -5,9 +5,12 @@ export async function GET() {
   try {
     const supabase = createServiceSupabaseClient();
 
-    // 今日の0時（UTC）
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
+    // 今日の0時（JST = UTC+9）をUTCで計算
+    const now = new Date();
+    const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
+    const nowInJST = new Date(now.getTime() + JST_OFFSET_MS);
+    nowInJST.setUTCHours(0, 0, 0, 0);
+    const todayStart = new Date(nowInJST.getTime() - JST_OFFSET_MS);
 
     const { data, error } = await supabase
       .from('counseling_sessions')

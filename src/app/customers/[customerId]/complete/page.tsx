@@ -11,7 +11,6 @@ import { motion } from "framer-motion";
 import { format, addWeeks } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import { QRCodeSVG } from 'qrcode.react';
-import { supabase } from '@/lib/supabase';
 
 export default function CompletePage() {
     const router = useRouter();
@@ -38,20 +37,19 @@ export default function CompletePage() {
             setSessionId(resolved);
             return;
         }
-        // fallback: DBから今日の最新セッションを取得
-        const todayStart = new Date();
-        todayStart.setHours(0, 0, 0, 0);
+        // fallback: Service Role API経由で今日の最新セッションを取得
         (async () => {
-            const { data, error } = await supabase
-                .from('counseling_sessions')
-                .select('id')
-                .eq('customer_id', customerId)
-                .gte('created_at', todayStart.toISOString())
-                .order('created_at', { ascending: false })
-                .limit(1)
-                .maybeSingle();
-            if (error) console.error('[CompletePage] Session query error:', error);
-            if (data) setSessionId(data.id);
+            try {
+                const res = await fetch(`/api/latest-session/${customerId}`);
+                if (!res.ok) {
+                    console.error('[CompletePage] Latest session API error:', res.status);
+                    return;
+                }
+                const { sessionId: sid } = await res.json();
+                if (sid) setSessionId(sid);
+            } catch (err) {
+                console.error('[CompletePage] Failed to fetch latest session:', err);
+            }
         })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [customerId]);

@@ -266,17 +266,19 @@ export function CounselingProvider({ children, customerId }: { children: ReactNo
     const [restoredSessionId, setRestoredSessionId] = useState<string | null>(null);
     const isSavingRef = useRef(false);
 
-    /** DBから未完了セッションを復元してContextにロードする */
+    /** DBから未完了セッションを復元してContextにロードする（Service Role API経由） */
     const restoreSession = async (sessionId: string): Promise<boolean> => {
         try {
-            const { data: session, error } = await supabase
-                .from('counseling_sessions')
-                .select('*, customer:customer_id(id, name, kana, age, phone), visit_id')
-                .eq('id', sessionId)
-                .single();
+            // Service Role経由で確実に取得（anon clientのRLS問題を回避）
+            const res = await fetch(`/api/restore-session/${sessionId}`);
+            if (!res.ok) {
+                console.error('Session restore API error:', res.status);
+                return false;
+            }
+            const session = await res.json();
 
-            if (error || !session) {
-                console.error('Session restore error:', error);
+            if (!session || session.error) {
+                console.error('Session restore error:', session?.error);
                 return false;
             }
 
