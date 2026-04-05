@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -145,6 +145,7 @@ export default function AiProposalPage() {
     const [styleSheetBase64, setStyleSheetBase64] = useState<{ data: string; mimeType: string } | null>(null);
     const [isGeneratingSheet, setIsGeneratingSheet] = useState(false);
     const [sheetError, setSheetError] = useState<string | null>(null);
+    const isSavingRef = useRef(false);
 
     useEffect(() => {
         // data.aiPlan にキャッシュがあれば再利用（戻り操作でのAPI再呼び出し防止）
@@ -466,6 +467,9 @@ export default function AiProposalPage() {
                     className="flex-1 h-12 border-primary text-primary hover:bg-primary/5"
                     disabled={isSaving}
                     onClick={async () => {
+                        // useRef で即座にガード（React state 更新より速い）
+                        if (isSavingRef.current) return;
+                        isSavingRef.current = true;
                         setIsSaving(true);
                         try {
                             let aiSuggestionWithImage = { ...proposal };
@@ -500,6 +504,7 @@ export default function AiProposalPage() {
                         } catch (err) {
                             console.error('Save error:', err);
                             alert('保存に失敗しました');
+                            isSavingRef.current = false;
                             setIsSaving(false);
                         }
                     }}
@@ -515,6 +520,8 @@ export default function AiProposalPage() {
                     className="flex-[2] h-12 bg-primary hover:bg-primary/90 text-white shadow-lg"
                     disabled={isSaving}
                     onClick={async () => {
+                        if (isSavingRef.current) return;
+                        isSavingRef.current = true;
                         setIsSaving(true);
                         try {
                             // スタイルシート画像をSupabase Storageにアップロード
@@ -554,6 +561,7 @@ export default function AiProposalPage() {
                             console.error('Save error:', err);
                             alert('保存に失敗しました。もう一度お試しください。');
                         } finally {
+                            isSavingRef.current = false;
                             setIsSaving(false);
                         }
                     }}

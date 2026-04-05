@@ -195,18 +195,19 @@ export default function CounselingInputPage() {
         setIsLoadingHistory(true);
         setShowFullPrevAiSuggestion(false);
         try {
-            // 1. Get the most recent COMPLETED counseling session (not the current in-progress one)
+            // 1. AI提案済みの最新セッションを取得（statusに関わらず）
+            // in_progressのまま放置されたセッションも前回記録として表示する
             const { data: counselingSession, error: csError } = await supabase
                 .from('counseling_sessions')
                 .select('*')
                 .eq('customer_id', customerId)
-                .eq('status', 'completed')
+                .not('ai_suggestion', 'is', null)
                 .order('created_at', { ascending: false })
                 .limit(1)
                 .maybeSingle();
 
             if (csError || !counselingSession) {
-                console.log('[PreviousRecord] No completed sessions found', {
+                console.log('[PreviousRecord] No sessions with AI suggestion found', {
                     customerId,
                     error: csError,
                 });
@@ -214,20 +215,16 @@ export default function CounselingInputPage() {
                 return;
             }
 
-            // 2. Get treatment record linked to that session's visit
-            const { data: treatmentRecord, error: trError } = await supabase
-                .from('treatment_records')
-                .select('*')
-                .eq('visit_id', counselingSession.visit_id)
-                .limit(1)
-                .maybeSingle();
-
-            if (trError) {
-                console.error('[PreviousRecord] treatment_records query failed', {
-                    customerId,
-                    error: trError,
-                    hint: 'If error is permission denied, check RLS policy for treatment_records SELECT.',
-                });
+            // 2. Get treatment record linked to that session's visit (if exists)
+            let treatmentRecord = null;
+            if (counselingSession.visit_id) {
+                const { data: tr } = await supabase
+                    .from('treatment_records')
+                    .select('*')
+                    .eq('visit_id', counselingSession.visit_id)
+                    .limit(1)
+                    .maybeSingle();
+                treatmentRecord = tr;
             }
 
             // Combine into the expected structure
@@ -291,16 +288,18 @@ export default function CounselingInputPage() {
         }));
     }, [customerId]);
 
-    // 1) 直近counseling_sessionsから補完（既存判定の基準）
+    // 1) 直近counseling_sessionsから補完（statusに関わらず、診断データがある最新セッションから取得）
     useEffect(() => {
         const fillFromLatestSession = async () => {
             if (!customerId || (ENABLE_LOCAL_FALLBACK && customerId.startsWith('local-'))) return;
 
+            // AI提案済み（face_shape or personal_color_season がある）の最新セッションを取得
+            // status='completed' 限定だと、in_progress で放置されたセッションの診断データが引き継がれない
             const { data: latestSession, error } = await supabase
                 .from('counseling_sessions')
                 .select('face_shape, personal_color_base, personal_color_season')
                 .eq('customer_id', customerId)
-                .eq('status', 'completed')
+                .not('ai_suggestion', 'is', null)
                 .order('created_at', { ascending: false })
                 .limit(1)
                 .maybeSingle();
@@ -309,7 +308,6 @@ export default function CounselingInputPage() {
                 console.error('[DiagnosisPreset] counseling_sessions latest query failed', {
                     customerId,
                     error,
-                    hint: 'If error is permission denied, check RLS policy for counseling_sessions SELECT.',
                 });
                 return;
             }
