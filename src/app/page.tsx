@@ -20,6 +20,25 @@ interface PendingSession {
   selectedMenus: string[];
   createdAt: string;
   stylistName: string | null;
+  step: 'input' | 'menu' | 'plan' | 'treatment';
+}
+
+const STEP_LABELS: Record<string, string> = {
+  input: 'カウンセリング入力',
+  menu: 'メニュー選択',
+  plan: 'AI提案',
+  treatment: '施術記録',
+};
+
+function getResumeUrl(session: PendingSession): string {
+  const base = `/customers/${session.customerId}`;
+  switch (session.step) {
+    case 'input': return `${base}/counseling/input?resume=${session.id}`;
+    case 'menu': return `${base}/counseling/menu?resume=${session.id}`;
+    case 'plan': return `${base}/counseling/plan?resume=${session.id}`;
+    case 'treatment': return `${base}/treatment/record?resume=${session.id}`;
+    default: return `${base}/counseling/input?resume=${session.id}`;
+  }
 }
 
 export default function Home() {
@@ -140,7 +159,7 @@ export default function Home() {
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <Clock size={16} className="text-accent" />
-              <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-wider">施術中のお客様</h2>
+              <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-wider">対応中のお客様</h2>
               <Badge variant="secondary" className="text-xs">{pendingSessions.length}</Badge>
             </div>
             {pendingSessions.map((session) => {
@@ -150,7 +169,7 @@ export default function Home() {
               return (
                 <button
                   key={session.id}
-                  onClick={() => router.push(`/customers/${session.customerId}/treatment/record?resume=${session.id}`)}
+                  onClick={() => router.push(getResumeUrl(session))}
                   className="w-full text-left"
                 >
                   <Card className="border-l-4 border-l-accent hover:shadow-md transition-shadow">
@@ -165,6 +184,7 @@ export default function Home() {
                             {time}{session.stylistName ? ` ・ ${session.stylistName}` : ''}
                             {session.selectedMenus.length > 0 && ` ・ ${session.selectedMenus.join(', ')}`}
                           </p>
+                          <p className="text-[10px] text-accent font-medium mt-0.5">{STEP_LABELS[session.step] || session.step}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-1 text-primary flex-shrink-0 ml-2">

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -135,8 +135,22 @@ export default function AiProposalPage() {
     const router = useRouter();
     const params = useParams();
     const customerId = params.customerId as string;
-    const { data, updateData, saveToSupabase, customer, stylist, isLoadingCustomer } = useCounseling();
+    const searchParams = useSearchParams();
+    const { data, updateData, saveToSupabase, customer, stylist, isLoadingCustomer, restoreSession } = useCounseling();
     const [selectedColor, setSelectedColor] = useState<any>(null);
+
+    // セッション再開
+    const resumeSessionId = searchParams.get('resume');
+    useEffect(() => {
+        if (!resumeSessionId) return;
+        let cancelled = false;
+        (async () => {
+            const success = await restoreSession(resumeSessionId);
+            if (!cancelled) console.log('[PlanPage] Restore result:', success);
+        })();
+        return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [resumeSessionId]);
     const [proposal, setProposal] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);

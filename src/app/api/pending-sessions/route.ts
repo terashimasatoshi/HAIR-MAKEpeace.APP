@@ -32,11 +32,10 @@ export async function GET() {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // AI診断済み & 未完了のみ、顧客ごとに最新1件
+    // 未完了のみ、顧客ごとに最新1件（どのステップでも表示）
     const seen = new Set<string>();
     const sessions = (data || [])
       .filter((s) => {
-        if (s.ai_suggestion == null) return false;
         if (s.status === 'completed') return false;
         return true;
       })
@@ -50,13 +49,20 @@ export async function GET() {
         const cust = Array.isArray(rawCustomer) ? rawCustomer[0] : rawCustomer;
         const rawStylist = s.stylist as unknown;
         const sty = Array.isArray(rawStylist) ? rawStylist[0] : rawStylist;
+        const menus = (s.selected_menus as string[]) || [];
+        // データ内容からステップを判定
+        let step: 'input' | 'menu' | 'plan' | 'treatment' = 'input';
+        if (s.ai_suggestion != null) step = 'treatment';
+        else if (menus.length > 0) step = 'plan';
+        else if (s.status === 'in_progress') step = 'input';
         return {
           id: s.id,
           customerId: s.customer_id,
           customerName: (cust as { name: string } | null)?.name || '不明',
-          selectedMenus: (s.selected_menus as string[]) || [],
+          selectedMenus: menus,
           createdAt: s.created_at,
           stylistName: (sty as { name: string } | null)?.name || null,
+          step,
         };
       });
 

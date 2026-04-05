@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useState, useEffect, useRef } from 'react';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Save, Loader2 } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useCounseling } from "@/contexts/CounselingContext";
 
@@ -98,9 +98,24 @@ export default function MenuSelectionPage() {
     const params = useParams();
     const customerId = params.customerId as string;
 
-    const { data, updateData, customer, isLoadingCustomer } = useCounseling();
+    const searchParams = useSearchParams();
+    const { data, updateData, customer, isLoadingCustomer, saveToSupabase, restoreSession } = useCounseling();
     const { selectedMenus, damageLevel, personalColor } = data;
-    // We can also show damage level here if needed, etc.
+    const [isTempSaving, setIsTempSaving] = useState(false);
+    const tempSavingRef = useRef(false);
+
+    // セッション再開
+    const resumeSessionId = searchParams.get('resume');
+    useEffect(() => {
+        if (!resumeSessionId) return;
+        let cancelled = false;
+        (async () => {
+            const success = await restoreSession(resumeSessionId);
+            if (!cancelled) console.log('[MenuPage] Restore result:', success);
+        })();
+        return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [resumeSessionId]);
 
     const toggleMenu = (id: string) => {
         const newMenus = selectedMenus.includes(id)
@@ -178,8 +193,8 @@ export default function MenuSelectionPage() {
             </main>
 
             {/* 5. Summary & Footer */}
-            {(selectedMenus.length > 0) && (
-                <div className="fixed bottom-0 w-full pb-safe bg-white border-t border-border z-20 shadow-[0_-5px_20px_rgba(0,0,0,0.05)]">
+            <div className="fixed bottom-0 w-full pb-safe bg-white border-t border-border z-20 shadow-[0_-5px_20px_rgba(0,0,0,0.05)]">
+                {selectedMenus.length > 0 && (
                     <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50">
                         <div className="text-sm">
                             <div className="flex justify-between items-center mb-1">
@@ -189,16 +204,39 @@ export default function MenuSelectionPage() {
                             <p className="font-bold line-clamp-2 text-primary">{selectedNames.join(', ')}</p>
                         </div>
                     </div>
-                    <div className="p-4">
-                        <Button
-                            className="w-full text-lg h-12 shadow-md bg-gradient-to-r from-primary to-[#5C8D6D] hover:from-[#3D6949] hover:to-[#4A7C59]"
-                            onClick={() => router.push(`/customers/${customerId}/counseling/plan`)}
-                        >
-                            次へ：AI提案を見る
-                        </Button>
-                    </div>
+                )}
+                <div className="p-4 flex gap-3">
+                    <Button
+                        variant="outline"
+                        className="flex-1 h-12 border-primary text-primary"
+                        disabled={isTempSaving}
+                        onClick={async () => {
+                            if (tempSavingRef.current) return;
+                            tempSavingRef.current = true;
+                            setIsTempSaving(true);
+                            try {
+                                await saveToSupabase(customerId);
+                                alert('一時保存しました');
+                                window.location.href = '/';
+                            } catch {
+                                alert('保存に失敗しました');
+                                tempSavingRef.current = false;
+                                setIsTempSaving(false);
+                            }
+                        }}
+                    >
+                        {isTempSaving ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Save className="mr-1 h-4 w-4" />}
+                        一時保存
+                    </Button>
+                    <Button
+                        className="flex-[2] h-12 shadow-md bg-gradient-to-r from-primary to-[#5C8D6D] hover:from-[#3D6949] hover:to-[#4A7C59]"
+                        disabled={selectedMenus.length === 0}
+                        onClick={() => router.push(`/customers/${customerId}/counseling/plan`)}
+                    >
+                        次へ：AI提案を見る
+                    </Button>
                 </div>
-            )}
+            </div>
         </div>
     );
 }

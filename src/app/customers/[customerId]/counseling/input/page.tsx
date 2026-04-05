@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight, Info, User, Smile, Palette, AlertCircle, ExternalLink } from "lucide-react";
+import { ChevronLeft, ChevronRight, Info, User, Smile, Palette, AlertCircle, ExternalLink, Save, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCounseling } from "@/contexts/CounselingContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -96,7 +96,22 @@ export default function CounselingInputPage() {
     const searchParams = useSearchParams();
     const customerId = params.customerId as string;
 
-    const { data, updateData, customer, isLoadingCustomer } = useCounseling();
+    const { data, updateData, customer, isLoadingCustomer, saveToSupabase, restoreSession } = useCounseling();
+    const [isTempSaving, setIsTempSaving] = useState(false);
+    const tempSavingRef = useRef(false);
+
+    // セッション再開: URLにresume=sessionIdがある場合、DBから復元
+    const resumeSessionId = searchParams.get('resume');
+    useEffect(() => {
+        if (!resumeSessionId) return;
+        let cancelled = false;
+        (async () => {
+            const success = await restoreSession(resumeSessionId);
+            if (!cancelled) console.log('[InputPage] Restore result:', success);
+        })();
+        return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [resumeSessionId]);
 
     // 新規登録画面から渡されたお悩みを初期値として設定
     useEffect(() => {
@@ -1024,10 +1039,32 @@ export default function CounselingInputPage() {
 
             </main>
 
-            {/* 9. Create Next Button */}
-            <div className="fixed bottom-0 w-full p-4 pb-safe-lg bg-white border-t border-border z-10">
+            {/* 9. Footer Buttons */}
+            <div className="fixed bottom-0 w-full p-4 pb-safe-lg bg-white border-t border-border z-10 flex gap-3">
                 <Button
-                    className="w-full text-lg h-12 shadow-md bg-gradient-to-r from-primary to-[#5C8D6D] hover:from-[#3D6949] hover:to-[#4A7C59]"
+                    variant="outline"
+                    className="flex-1 h-12 border-primary text-primary"
+                    disabled={isTempSaving}
+                    onClick={async () => {
+                        if (tempSavingRef.current) return;
+                        tempSavingRef.current = true;
+                        setIsTempSaving(true);
+                        try {
+                            await saveToSupabase(customerId);
+                            alert('一時保存しました');
+                            window.location.href = '/';
+                        } catch {
+                            alert('保存に失敗しました');
+                            tempSavingRef.current = false;
+                            setIsTempSaving(false);
+                        }
+                    }}
+                >
+                    {isTempSaving ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Save className="mr-1 h-4 w-4" />}
+                    一時保存
+                </Button>
+                <Button
+                    className="flex-[2] h-12 shadow-md bg-gradient-to-r from-primary to-[#5C8D6D] hover:from-[#3D6949] hover:to-[#4A7C59]"
                     onClick={() => router.push(`/customers/${customerId}/counseling/menu`)}
                 >
                     次へ：メニュー選択
