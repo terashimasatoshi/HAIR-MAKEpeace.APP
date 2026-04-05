@@ -291,6 +291,11 @@ export default function NewCustomerPage() {
                     </div>
                 </div>
 
+                {/* 説明文 */}
+                <p className="text-sm text-muted-foreground text-center leading-relaxed">
+                    お客様に似合う髪型のご提案のために<br />少しお聞かせください
+                </p>
+
                 {/* お悩み選択 */}
                 <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
                     <div className="px-4 py-3 flex items-center gap-2 border-b">
