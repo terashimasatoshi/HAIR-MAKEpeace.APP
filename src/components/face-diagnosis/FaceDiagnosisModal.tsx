@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 import { Camera } from "./Camera";
 import { FaceMeshOverlay } from "./FaceMeshOverlay";
 import { ResultChart } from "./ResultChart";
@@ -36,7 +37,32 @@ interface FaceDiagnosisModalProps {
   onResult: (faceShapeId: string) => void;
 }
 
-type Phase = "camera" | "analyzing" | "result";
+type Phase = "camera" | "analyzing" | "ai-analyzing" | "result";
+
+/** Claude Vision API に画像 + 計測データを送信して顔型を判定 */
+async function callVisionDiagnosis(
+  imageDataUrl: string,
+  measurements: FaceMeasurements
+): Promise<{ faceType: FaceType; confidence: number; reason: string } | null> {
+  try {
+    // dataURL → base64 + mediaType
+    const match = imageDataUrl.match(/^data:(image\/\w+);base64,(.+)$/);
+    if (!match) return null;
+    const [, mediaType, imageBase64] = match;
+
+    const res = await fetch('/api/face-diagnosis', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imageBase64, mediaType, measurements }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!data.faceType) return null;
+    return data;
+  } catch {
+    return null;
+  }
+}
 
 export function FaceDiagnosisModal({
   open,
@@ -50,9 +76,10 @@ export function FaceDiagnosisModal({
   const [error, setError] = useState<string | null>(null);
   const [validFrames, setValidFrames] = useState(0);
   const [rejectCounts, setRejectCounts] = useState<Record<string, number>>({});
+  const [aiReason, setAiReason] = useState<string | null>(null);
 
-  /** 複数フレーム集約の結果を受け取る（画像込み、onCaptureとは独立） */
-  const handleAggregatedResult = useCallback((aggResult: {
+  /** 複数フレーム集約の結果を受け取る → Claude Vision で補正 */
+  const handleAggregatedResult = useCallback(async (aggResult: {
     faceType: FaceType;
     scores: FaceScores;
     confidence: number;
@@ -63,22 +90,62 @@ export function FaceDiagnosisModal({
     imageDataUrl: string;
     imageSize: { width: number; height: number };
   }) => {
-    // 画像データも同時にセット（onCaptureを経由しない）
     setImageUrl(aggResult.imageDataUrl);
     setCapturedSize(aggResult.imageSize);
-    setResult({
+    setValidFrames(aggResult.validFrames);
+    setRejectCounts(aggResult.rejectCounts);
+
+    // まず MediaPipe 結果をセット（フォールバック用）
+    const mediapipeResult: DiagnosisResult = {
       faceType: aggResult.faceType,
       scores: aggResult.scores,
       confidence: aggResult.confidence,
       measurements: aggResult.measurements,
       landmarks: aggResult.landmarks,
-    });
-    setValidFrames(aggResult.validFrames);
-    setRejectCounts(aggResult.rejectCounts);
+    };
+
+    // Claude Vision に問い合わせ
+    setPhase("ai-analyzing");
+    setAiReason(null);
+    const aiResult = await callVisionDiagnosis(aggResult.imageDataUrl, aggResult.measurements);
+
+    if (aiResult && aiResult.faceType) {
+      // AI の判定を最終結果に反映
+      const aiFaceType = aiResult.faceType as FaceType;
+      if (["oval", "round", "long", "base"].includes(aiFaceType)) {
+        // AIの判定でスコアを再構成（AI判定を1位、MediaPipeのスコア比率を維持）
+        const aiConfidence = Math.max(aiResult.confidence || 70, 50);
+        const remaining = 100 - aiConfidence;
+        const otherTypes = (["oval", "round", "long", "base"] as FaceType[]).filter(t => t !== aiFaceType);
+        // MediaPipeの他タイプのスコア比率で残りを配分
+        const otherTotal = otherTypes.reduce((sum, t) => sum + (aggResult.scores[t] || 1), 0);
+        const newScores: FaceScores = { oval: 0, round: 0, long: 0, base: 0 };
+        newScores[aiFaceType] = aiConfidence;
+        for (const t of otherTypes) {
+          newScores[t] = Math.round((aggResult.scores[t] || 1) / otherTotal * remaining);
+        }
+        // 端数補正
+        const total = Object.values(newScores).reduce((a, b) => a + b, 0);
+        if (total !== 100) newScores[aiFaceType] += 100 - total;
+
+        setResult({
+          ...mediapipeResult,
+          faceType: aiFaceType,
+          scores: newScores,
+          confidence: aiConfidence,
+        });
+        setAiReason(aiResult.reason || null);
+        setPhase("result");
+        return;
+      }
+    }
+
+    // AI呼び出し失敗時はMediaPipe結果をそのまま使用
+    setResult(mediapipeResult);
     setPhase("result");
   }, []);
 
-  /** 単発キャプチャ画像を受け取る（フォールバック: MediaPipeが使えない場合のみ） */
+  /** 単発キャプチャ画像を受け取る（フォールバック） */
   const handleCapture = useCallback(async (canvas: HTMLCanvasElement) => {
     const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
     setImageUrl(dataUrl);
@@ -86,12 +153,37 @@ export function FaceDiagnosisModal({
 
     setPhase("analyzing");
     setError(null);
+    setAiReason(null);
 
     try {
       const { landmarks, measurements } = await analyzeFace(canvas);
       const { scores, faceType, confidence } = calculateScores(measurements);
+      const mediapipeResult = { faceType, scores, confidence, measurements, landmarks };
 
-      setResult({ faceType, scores, confidence, measurements, landmarks });
+      // Claude Vision で補正
+      setPhase("ai-analyzing");
+      const aiResult = await callVisionDiagnosis(dataUrl, measurements);
+
+      if (aiResult && aiResult.faceType && ["oval", "round", "long", "base"].includes(aiResult.faceType)) {
+        const aiFaceType = aiResult.faceType as FaceType;
+        const aiConf = Math.max(aiResult.confidence || 70, 50);
+        const remaining = 100 - aiConf;
+        const otherTypes = (["oval", "round", "long", "base"] as FaceType[]).filter(t => t !== aiFaceType);
+        const otherTotal = otherTypes.reduce((sum, t) => sum + (scores[t] || 1), 0);
+        const newScores: FaceScores = { oval: 0, round: 0, long: 0, base: 0 };
+        newScores[aiFaceType] = aiConf;
+        for (const t of otherTypes) {
+          newScores[t] = Math.round((scores[t] || 1) / otherTotal * remaining);
+        }
+        const total = Object.values(newScores).reduce((a, b) => a + b, 0);
+        if (total !== 100) newScores[aiFaceType] += 100 - total;
+
+        setResult({ ...mediapipeResult, faceType: aiFaceType, scores: newScores, confidence: aiConf });
+        setAiReason(aiResult.reason || null);
+      } else {
+        setResult(mediapipeResult);
+      }
+
       setValidFrames(1);
       setPhase("result");
     } catch (e) {
@@ -124,6 +216,7 @@ export function FaceDiagnosisModal({
     setError(null);
     setValidFrames(0);
     setRejectCounts({});
+    setAiReason(null);
     setPhase("camera");
   }, []);
 
@@ -137,6 +230,7 @@ export function FaceDiagnosisModal({
         setError(null);
         setValidFrames(0);
         setRejectCounts({});
+        setAiReason(null);
       }
       onOpenChange(newOpen);
     },
@@ -152,6 +246,7 @@ export function FaceDiagnosisModal({
           <DialogTitle>
             {phase === "camera" && "顔型をカメラで診断"}
             {phase === "analyzing" && "解析中..."}
+            {phase === "ai-analyzing" && "AI判定中..."}
             {phase === "result" && "診断結果"}
           </DialogTitle>
         </DialogHeader>
@@ -173,6 +268,14 @@ export function FaceDiagnosisModal({
           <div className="flex flex-col items-center justify-center min-h-[300px] gap-4">
             <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
             <p className="text-muted-foreground">顔を解析しています...</p>
+          </div>
+        )}
+
+        {phase === "ai-analyzing" && (
+          <div className="flex flex-col items-center justify-center min-h-[300px] gap-4">
+            <Loader2 className="w-12 h-12 text-primary animate-spin" />
+            <p className="text-muted-foreground">AIが顔型を判定しています...</p>
+            <p className="text-xs text-muted-foreground">数秒お待ちください</p>
           </div>
         )}
 
@@ -210,6 +313,13 @@ export function FaceDiagnosisModal({
                 <p className="text-xs text-muted-foreground mt-1">
                   {validFrames}フレーム集約
                 </p>
+              )}
+
+              {aiReason && (
+                <div className="mt-3 bg-primary/5 rounded-lg p-3 text-sm text-left">
+                  <p className="text-xs font-bold text-primary mb-1">AI判定理由</p>
+                  <p className="text-muted-foreground text-xs leading-relaxed">{aiReason}</p>
+                </div>
               )}
             </div>
 
