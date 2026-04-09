@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { NextResponse } from 'next/server';
-import { verifyApiSecret, checkRateLimit } from '@/lib/api-guard';
+import { checkRateLimit } from '@/lib/api-guard';
 
 interface GenerateReviewRequest {
   hitokoto: string;
@@ -11,8 +11,8 @@ interface GenerateReviewRequest {
 }
 
 export async function POST(request: Request) {
-  const authError = await verifyApiSecret(request);
-  if (authError) return authError;
+  // 共有ページ（お客様がQRコードでアクセスする公開ページ）から呼ばれるため
+  // CSRF検証は行わず、レート制限のみで保護する
   const rateLimitError = checkRateLimit(request);
   if (rateLimitError) return rateLimitError;
   try {
@@ -67,7 +67,7 @@ ${Array.isArray(body.concerns) && body.concerns.length > 0 ? body.concerns.join(
 口コミ文のみを出力してください。前置きや説明は不要です。`;
 
     const response = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20250901',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 500,
       temperature: 0.8,
       messages: [{ role: 'user', content: prompt }],

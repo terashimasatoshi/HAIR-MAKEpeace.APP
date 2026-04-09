@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { Star, Sparkles, ClipboardCopy, Check, Loader2, MapPin } from 'lucide-react';
-import { fetchApi } from '@/lib/fetch-api';
 
 type StoreKey = 'takayanagi' | 'hanado';
 
@@ -44,7 +43,8 @@ export function GoogleReviewBanner({ reviewUrlTakayanagi, reviewUrlHanado, defau
 
     setIsGenerating(true);
     try {
-      const res = await fetchApi('/api/generate-review', {
+      // 共有ページは公開ページのためCSRFトークンなしの素のfetchを使用
+      const res = await fetch('/api/generate-review', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ hitokoto, storeName: STORE_FULL_NAMES[selectedStore], menuNames, concerns, stylistName: selectedStylist }),
